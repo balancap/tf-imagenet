@@ -36,13 +36,13 @@ def replace_with_train_params(params):
     """Replace some parameters with the training parameters.
     Returns the updated params.
     """
+    params = params._replace(eval=True)
     train_params = parameters.load_params(params.train_dir)
     if not train_params:
         deploy.log_fn('WARNING: no training parameters file found.')
         return params
 
     p = params
-    p = p._replace(eval=True)
     p = p._replace(eval_dir=os.path.join(params.train_dir, 'eval'))
     p = p._replace(eval_interval_secs=train_params.save_model_secs)
 
