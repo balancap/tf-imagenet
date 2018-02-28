@@ -19,26 +19,23 @@ from __future__ import print_function
 
 # Import all the models!
 from .inception import inception_v1, inception_v2, inception_v3, inception_v4
-from .inception import inception_v2a, inception_v2b, inception_v2d
+# from .inception import inception_v2a, inception_v2b, inception_v2d
 
-from .mobilenet import mobilenet_v1
+from .mobilenet import mobilenet_v1_relu
 from .mobilenet import mobilenet_v1_orig
 from .resnet import resnet_v1, resnet_v2
 from .nasnet import nasnet
 
-from .mobilenet import hex_mobilenet_v1
+# from .mobilenet import hex_mobilenet_v1
 
 IMAGENET_MODELS = {
     'googlenet': lambda: inception_v1.InceptionV1(False),
     'inception_v1': lambda: inception_v1.InceptionV1(True),
     'inception_v2': lambda: inception_v2.InceptionV2(),
-    'inception_v2a': lambda: inception_v2a.InceptionV2A(),
-    'inception_v2b': lambda: inception_v2b.InceptionV2B(),
-    'inception_v2d': lambda: inception_v2d.InceptionV2D(),
     'inception_v3': lambda: inception_v3.InceptionV3(),
     'inception_v4': lambda: inception_v4.InceptionV4(),
     'mobilenet_v1_orig': lambda: mobilenet_v1_orig.MobileNetV1(),
-    'mobilenet_v1': lambda: mobilenet_v1.MobileNetV1(),
+    'mobilenet_v1_relu': lambda: mobilenet_v1_relu.MobileNetV1(),
     'resnet_v1_50': lambda: resnet_v1.ResNet_v1_50(224),
     'resnet_v1_101': lambda: resnet_v1.ResNet_v1_101(224),
     'resnet_v1_152': lambda: resnet_v1.ResNet_v1_152(224),
