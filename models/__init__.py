@@ -63,7 +63,7 @@ def create_model(model_name, dataset):
     models_dict = IMAGENET_MODELS
 
     if model_name not in models_dict.keys():
-        raise ValueError("Unknown model '%s'." % model_name)
+        raise ValueError("Unknown model '%s' in collection '%s'." % (model_name, IMAGENET_MODELS.keys()))
 
     # Build model and set some parameters.
     mc = models_dict[model_name]()
