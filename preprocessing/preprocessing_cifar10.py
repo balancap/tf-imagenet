@@ -30,6 +30,7 @@ class Cifar10ImagePreprocessor(object):
                  train,
                  distortions,
                  resize_method,
+                 eval_method,
                  shift_ratio,
                  summary_verbosity=0,
                  distort_color_in_yiq=False,

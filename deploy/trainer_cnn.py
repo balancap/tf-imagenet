@@ -1205,6 +1205,7 @@ class TrainerCNN(object):
             train=(not self.params.eval),
             distortions=self.params.distortions,
             resize_method=self.resize_method,
+            eval_method=self.params.eval_method,
             shift_ratio=shift_ratio,
             summary_verbosity=self.params.summary_verbosity,
             distort_color_in_yiq=self.params.distort_color_in_yiq,

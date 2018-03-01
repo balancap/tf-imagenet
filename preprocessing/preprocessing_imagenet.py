@@ -20,32 +20,24 @@ import tensorflow as tf
 
 # from deploy import trainer_utils
 
-# from tensorflow.contrib.data.python.ops import interleave_ops
-# from tensorflow.contrib.data.python.ops import batching
+from tensorflow.contrib.data.python.ops import interleave_ops
+from tensorflow.contrib.data.python.ops import batching
 from tensorflow.python.ops import data_flow_ops
 from tensorflow.python.platform import gfile
 
 from .utils import parse_example_proto
 from .image import get_image_resize_method, distort_color
 
-try:
-    from tensorflow.contrib.data.python.ops import interleave_ops
-    from tensorflow.contrib.data.python.ops import batching
-except ImportError:
-    from tf_extended.legacy import interleave_ops
-    from tf_extended.legacy import batching
-    print('WARNING: TF without interleave_ops module.')
 
-
-def eval_image(image,
-               height,
-               width,
-               batch_position,
-               resize_method,
-               summary_verbosity=0):
+def eval_image_vgg(image,
+                   height,
+                   width,
+                   batch_position,
+                   resize_method,
+                   summary_verbosity=0):
     """Get the image for model evaluation.
 
-    We preprocess the image simiarly to Slim, see
+    We preprocess the image simiarly to VGG Slim, see
     https://github.com/tensorflow/models/blob/master/slim/preprocessing/vgg_preprocessing.py
     Validation images do not have bounding boxes, so to crop the image, we first
     resize the image such that the aspect ratio is maintained and the resized
@@ -117,6 +109,60 @@ def eval_image(image,
             tf.summary.image(
                 'cropped_resized_image', tf.expand_dims(distorted_image, 0))
         image = distorted_image
+    return image
+
+
+def eval_image_inception(image,
+                         height,
+                         width,
+                         batch_position,
+                         resize_method,
+                         summary_verbosity=0):
+    """Get the image for model evaluation.
+
+    We preprocess the image similarly to Inception Slim, see
+    https://github.com/tensorflow/models/blob/master/research/slim/preprocessing/inception_preprocessing.py
+
+    The procedure is simpler than the VGG cropping: simply extract the center
+    part of the image and then resize it to the expected output shape (which may
+    induce some distortions).
+
+    Args:
+        image: 3-D float Tensor representing the image.
+        height: The height of the image that will be returned.
+        width: The width of the image that will be returned.
+        batch_position: position of the image in a batch, which affects how images
+            are distorted and resized. NOTE: this argument can be an integer or a
+            tensor
+        resize_method: one of the strings 'round_robin', 'nearest', 'bilinear',
+            'bicubic', or 'area'.
+        summary_verbosity: Verbosity level for summary ops. Pass 0 to disable both
+            summaries and checkpoints.
+    Returns:
+        An image of size (output_height, output_width, 3) that is resized and
+        cropped as described above.
+    """
+    with tf.name_scope('eval_image'):
+        if summary_verbosity >= 3:
+            tf.summary.image(
+                'original_image', tf.expand_dims(image, 0))
+        # shape = tf.shape(image)
+        # image_height = shape[0]
+        # image_width = shape[1]
+
+        # Crop the central region of the image with an area containing 87.5% of the original.
+        central_fraction=0.875
+        if central_fraction:
+            image = tf.image.central_crop(image, central_fraction=central_fraction)
+
+        # Resize the image to shape (`height`, `width`)
+        image_resize_method = get_image_resize_method(resize_method, batch_position)
+        image = tf.image.resize_images(image, [height, width],
+                                       image_resize_method,
+                                       align_corners=False)
+        # image.set_shape([height, width, 3])
+        if summary_verbosity >= 3:
+            tf.summary.image('cropped_resized_image', tf.expand_dims(image, 0))
     return image
 
 
@@ -249,6 +295,7 @@ class RecordInputImagePreprocessor(object):
                  train,
                  distortions,
                  resize_method,
+                 eval_method,
                  shift_ratio,
                  summary_verbosity,
                  distort_color_in_yiq,
@@ -260,6 +307,7 @@ class RecordInputImagePreprocessor(object):
         self.dtype = dtype
         self.train = train
         self.resize_method = resize_method
+        self.eval_method = eval_method
         self.shift_ratio = shift_ratio
         self.distortions = distortions
         self.distort_color_in_yiq = distort_color_in_yiq
@@ -281,6 +329,12 @@ class RecordInputImagePreprocessor(object):
                                 distort_color_in_yiq=self.distort_color_in_yiq,
                                 fuse_decode_and_crop=self.fuse_decode_and_crop)
         else:
+            # Evaluation method (default=VGG).
+            eval_methods = {
+                'vgg': eval_image_vgg,
+                'inception': eval_image_inception,
+            }
+            eval_image = eval_methods.get(self.eval_method, eval_image_vgg)
             image = tf.image.decode_jpeg(
                 image_buffer, channels=3, dct_method='INTEGER_FAST')
             image = eval_image(image, self.height, self.width, batch_position,

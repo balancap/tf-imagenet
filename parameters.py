@@ -117,6 +117,9 @@ DEFAULT_PARAMS = {
                    'fashion. Other modes support any sizes and apply random '
                    'bbox distortions before resizing (even with '
                    'distortions=False).'),
+    'eval_method':
+        _ParamSpec('string', 'bgg',
+                   'Evaluation method used, i.e. how to crop and resize.'),
     'distortions':
         _ParamSpec('boolean', True,
                    'Enable/disable distortions during image preprocessing. '

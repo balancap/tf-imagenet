@@ -21,9 +21,19 @@ import tensorflow as tf
 class SyntheticImagePreprocessor(object):
     """Preprocessor used for images and labels.
     """
-    def __init__(self, height, width, batch_size, num_splits,
-                 dtype, train, distortions, resize_method, shift_ratio,
-                 summary_verbosity, distort_color_in_yiq=False,
+    def __init__(self,
+                 height,
+                 width,
+                 batch_size,
+                 num_splits,
+                 dtype,
+                 train,
+                 distortions,
+                 resize_method,
+                 eval_method,
+                 shift_ratio,
+                 summary_verbosity,
+                 distort_color_in_yiq=False,
                  fuse_decode_and_crop=False):
         del train, distortions, resize_method, summary_verbosity
         del distort_color_in_yiq
