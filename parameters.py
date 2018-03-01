@@ -118,7 +118,7 @@ DEFAULT_PARAMS = {
                    'bbox distortions before resizing (even with '
                    'distortions=False).'),
     'eval_method':
-        _ParamSpec('string', 'bgg',
+        _ParamSpec('string', 'vgg',
                    'Evaluation method used, i.e. how to crop and resize.'),
     'distortions':
         _ParamSpec('boolean', True,

@@ -17,9 +17,9 @@ An important aspect of this project is to be able to reproduce SOTA results repo
 
 ## Trained models
 
-Publication | Model Name | Checkpoint | Top-1 Accuracy| Top-5 Accuracy |
+Publication | Model Name | Checkpoint | Top-1 Accuracy (VGG / Inception) | Top-5 Accuracy  (VGG / Inception) |
 :----:|:------------:|:----------:|:-------:|:--------:|
-[MobileNets v1](https://arxiv.org/pdf/1704.04861.pdf) | [mobilenet_v1_relu](https://github.com/balancap/tf-imagenet/blob/master/models/mobilenet/mobilenet_v1_relu.py) | - | 72.9 | 90.6 |
+[MobileNets v1](https://arxiv.org/pdf/1704.04861.pdf) | [mobilenet_v1_relu](https://github.com/balancap/tf-imagenet/blob/master/models/mobilenet/mobilenet_v1_relu.py) | - | 72.9 / 72.2 | 90.6 / 90.5 |
 
 To evaluate a checkpoint, simply use the `eval.py` script as following:
 ```bash
@@ -32,6 +32,7 @@ python eval.py \
     --data_subset=validation \
     --train_dir=./checkpoints/mobilenets_v1_relu.ckpt \
     --ckpt_scope=v/cg/:v0/cg/ \
+    --eval_method=inception \
     --data_format=NHWC \
     --moving_average_decay=0.999 \
     --model=mobilenet_v1_relu
