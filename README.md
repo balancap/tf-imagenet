@@ -6,9 +6,10 @@ This repository is a (shameful!) fork of the official [TensorFlow benchmarks](ht
 Whereas the latter provides a fully optimized TF benchmark on the imagenet dataset (yes, TF can be competitive with other frameworks in terms of speed!), it does not provide a full environment for obtaining the best trained models and reproducing SOTA results.
 
 Hence, this fork focuses on providing a tested and complete implementation for training TF models on ImageNet (on deep learning stations, but also AWS P3 instances). More specifically, here are the main improvements / modifications compared to the original repo
-* No other custom layers API. Use TF slim / Keras for models definition;
+* No additional custom layer API. Use TF slim / Keras for models definition;
 * Support TF weight decay API instead of uniform L2-weight decay on every variable (which can lead a large drop of the final accuracy).
 * Support `moving_average_decay`, `label_smoothing` and `gradient_clipping`  to improve accuracy;
+* VGG and Inception evaluation modes;
 * Additional information recorded in TensorBoard.
 
 # State-of-the art reproduction
@@ -37,6 +38,8 @@ python eval.py \
     --moving_average_decay=0.999 \
     --model=mobilenet_v1_relu
 ```
+
+Note that for relatively small models, the evaluation mode (VGG or Inception) can have no negligeable impact on the top-1 and top-5 accuracies.
 
 
 
