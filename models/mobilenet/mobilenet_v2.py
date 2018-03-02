@@ -208,10 +208,11 @@ def mobilenet_v2_base(inputs,
                 elif isinstance(conv_def, Bottleneck):
                     # Stride > 1: no residual part.
                     res = net if layer_stride == 1 else None
+                    in_depth = tfx.layers.channel_dimension(net)
 
                     # Increase depth with 1x1 conv.
                     end_point = end_point_base + '_up_pointwise'
-                    net = slim.conv2d(net, depth(conv_def.depth * conv_def.factor),
+                    net = slim.conv2d(net, depth(in_depth * conv_def.factor),
                                       [1, 1], stride=1, scope=end_point)
                     end_points[end_point] = net
                     # Depthwise conv2d.

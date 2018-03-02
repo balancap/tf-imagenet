@@ -54,7 +54,7 @@ def _get_dimension(shape, dim, min_rank=1):
 # Extension of TensorFlow common layers.
 # =========================================================================== #
 @add_arg_scope
-def channel_dimension(shape, data_format, min_rank=1):
+def channel_dimension(shape, data_format='NHWC', min_rank=1):
     """Returns the channel dimension of shape, while checking it has min_rank.
     Args:
         shape: A `TensorShape`.
