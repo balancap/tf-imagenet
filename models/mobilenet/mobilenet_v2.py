@@ -206,9 +206,9 @@ def mobilenet_v2_base(inputs,
 
                 # Bottleneck block.
                 elif isinstance(conv_def, Bottleneck):
-                    # Stride > 1: no residual part.
-                    res = net if layer_stride == 1 else None
+                    # Stride > 1 or different depth: no residual part.
                     in_depth = tfx.layers.channel_dimension(net.get_shape())
+                    res = net if layer_stride == 1 and in_depth == conv_def.depth else None
 
                     # Increase depth with 1x1 conv.
                     end_point = end_point_base + '_up_pointwise'
