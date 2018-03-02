@@ -40,8 +40,9 @@ slim = tf.contrib.slim
 class MobileNetV2(abstract_model.Model):
     """MobileNetV2 model.
     """
-    def __init__(self):
-        self.scope = 'MobilenetV2'
+    def __init__(self, depth_multiplier=1.0):
+        self.scope = 'MobileNetV2'
+        self.depth_multiplier = depth_multiplier
         super(MobileNetV2, self).__init__(self.scope, 224, 32, 0.005)
 
     def forward(self, inputs, num_classes, data_format, is_training):
@@ -60,7 +61,7 @@ class MobileNetV2(abstract_model.Model):
                 dropout_keep_prob=0.9,
                 is_training=is_training,
                 min_depth=8,
-                depth_multiplier=1.0,
+                depth_multiplier=self.depth_multiplier,
                 conv_defs=None,
                 prediction_fn=tf.contrib.layers.softmax,
                 spatial_squeeze=True,
@@ -110,7 +111,6 @@ _CONV_DEFS = [
     Bottleneck(kernel=[3, 3], stride=1, depth=320, factor=6),
     Conv(kernel=[1, 1], stride=1, depth=1280, factor=1)
 ]
-
 
 def mobilenet_v2_base(inputs,
                       final_endpoint='Conv2d_18',
@@ -329,17 +329,6 @@ def mobilenet_v2(inputs,
     return logits, end_points
 
 mobilenet_v2.default_image_size = 224
-
-
-def wrapped_partial(func, *args, **kwargs):
-    partial_func = functools.partial(func, *args, **kwargs)
-    functools.update_wrapper(partial_func, func)
-    return partial_func
-
-
-mobilenet_v2_075 = wrapped_partial(mobilenet_v2, depth_multiplier=0.75)
-mobilenet_v2_050 = wrapped_partial(mobilenet_v2, depth_multiplier=0.50)
-mobilenet_v2_025 = wrapped_partial(mobilenet_v2, depth_multiplier=0.25)
 
 
 def mobilenet_v2_arg_scope(is_training=True,
