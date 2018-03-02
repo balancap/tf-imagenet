@@ -229,7 +229,8 @@ def mobilenet_v2_base(inputs,
                                       [1, 1], activation_fn=None,
                                       stride=1, scope=end_point)
                     # Residual connection?
-                    net = tf.add(res, net) if res is not None else net
+                    end_point = end_point_base + '_residual'
+                    net = tf.add(res, net, name=end_point) if res is not None else net
                     end_points[end_point] = net
 
                 # Unknown...
