@@ -21,8 +21,7 @@ from __future__ import print_function
 from .inception import inception_v1, inception_v2, inception_v3, inception_v4
 # from .inception import inception_v2a, inception_v2b, inception_v2d
 
-from .mobilenet import mobilenet_v1_relu
-from .mobilenet import mobilenet_v1_orig
+from .mobilenet import mobilenet_v1_orig, mobilenet_v1_relu, mobilenet_v2
 from .resnet import resnet_v1, resnet_v2
 from .nasnet import nasnet
 
@@ -36,6 +35,8 @@ IMAGENET_MODELS = {
     'inception_v4': lambda: inception_v4.InceptionV4(),
     'mobilenet_v1_orig': lambda: mobilenet_v1_orig.MobileNetV1(),
     'mobilenet_v1_relu': lambda: mobilenet_v1_relu.MobileNetV1(),
+    'mobilenet_v2_d1': lambda: mobilenet_v2.MobileNetV2(),
+    'mobilenet_v2_d14': lambda: mobilenet_v2.MobileNetV2(),
     'resnet_v1_50': lambda: resnet_v1.ResNet_v1_50(224),
     'resnet_v1_101': lambda: resnet_v1.ResNet_v1_101(224),
     'resnet_v1_152': lambda: resnet_v1.ResNet_v1_152(224),
