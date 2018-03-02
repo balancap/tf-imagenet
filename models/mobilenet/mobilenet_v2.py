@@ -208,7 +208,7 @@ def mobilenet_v2_base(inputs,
                 elif isinstance(conv_def, Bottleneck):
                     # Stride > 1: no residual part.
                     res = net if layer_stride == 1 else None
-                    in_depth = tfx.layers.channel_dimension(net)
+                    in_depth = tfx.layers.channel_dimension(net.get_shape())
 
                     # Increase depth with 1x1 conv.
                     end_point = end_point_base + '_up_pointwise'
