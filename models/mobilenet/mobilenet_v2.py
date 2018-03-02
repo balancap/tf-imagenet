@@ -230,7 +230,7 @@ def mobilenet_v2_base(inputs,
                                       stride=1, scope=end_point)
                     # Residual connection?
                     end_point = end_point_base + '_residual'
-                    print(net, res, end_point)
+                    print(net, res, end_point, in_depth, conv_def.depth)
                     net = tf.add(res, net, name=end_point) if res is not None else net
                     end_points[end_point] = net
 
