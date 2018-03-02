@@ -180,11 +180,10 @@ def mobilenet_v2_base(inputs,
 
             # The atrous convolution rate parameter.
             rate = 1
-
             net = inputs
+            in_depth = 3
             for i, conv_def in enumerate(conv_defs):
                 end_point_base = 'Conv2d_%d' % i
-
                 if output_stride is not None and current_stride == output_stride:
                     # If we have reached the target output_stride, then we need to employ
                     # atrous convolution with stride=1 and multiply the atrous rate by the
@@ -207,7 +206,7 @@ def mobilenet_v2_base(inputs,
                 # Bottleneck block.
                 elif isinstance(conv_def, Bottleneck):
                     # Stride > 1 or different depth: no residual part.
-                    in_depth = tfx.layers.channel_dimension(net.get_shape())
+                    # in_depth = tfx.layers.channel_dimension(net.get_shape())
                     res = net if layer_stride == 1 and in_depth == conv_def.depth else None
 
                     # Increase depth with 1x1 conv.
@@ -238,6 +237,7 @@ def mobilenet_v2_base(inputs,
                 else:
                     raise ValueError('Unknown convolution type %s for layer %d'
                                      % (conv_def.ltype, i))
+                in_depth = conv_def.depth
                 # Final end point?
                 if final_endpoint in end_points:
                     return end_points[final_endpoint], end_points
