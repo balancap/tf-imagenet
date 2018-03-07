@@ -45,6 +45,12 @@ python eval.py \
     --model=mobilenet_v1_relu
 ```
 
+## TEST MODELS
+
+Publication | Model Name | Top-1 (VGG / Inception) | Top-5  (VGG / Inception) |
+:----:|:------------:|:-------:|:--------:|
+Hex MobileNets v1 | hex_mobilenet_v1_5x5_w | 73.1 / 72.5 | 91.0 / 90.6 |
+
 # Install
 
 ## Dependencies
