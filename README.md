@@ -22,11 +22,11 @@ We have trained a couple of models to reproduce (or even improve!) results repor
 
 Note that for relatively small models, the evaluation mode (VGG or Inception cropping) can have no negligeable impact on the top-1 and top-5 accuracies.
 
-Publication | Model Name | Checkpoint | Top-1 (VGG / Inception) | Top-5  (VGG / Inception) |
+Publication | Model Name | Top-1 (VGG / Inception) | Top-5  (VGG / Inception) |
 :----:|:------------:|:----------:|:-------:|:--------:|
-[MobileNets v1](https://arxiv.org/pdf/1704.04861.pdf) | [mobilenet_v1_relu](https://github.com/balancap/tf-imagenet/blob/master/models/mobilenet/mobilenet_v1_relu.py) | - | 72.9 / 72.2 | 90.6 / 90.5 |
-[MobileNets v2 - Multiplier 1.0](https://arxiv.org/pdf/1801.04381.pdf) | [mobilenet_v2_d1](https://github.com/balancap/tf-imagenet/blob/master/models/mobilenet/mobilenet_v2.py) | - | 72.1 / 71.4 | 90.5 / 90.1 |
-[MobileNets v2 - Multiplier 1.4](https://arxiv.org/pdf/1801.04381.pdf) | [mobilenet_v2_d14](https://github.com/balancap/tf-imagenet/blob/master/models/mobilenet/mobilenet_v2.py) | - | 75.0 / 74.6 | 92.0 / 91.9 |
+[MobileNets v1](https://arxiv.org/pdf/1704.04861.pdf) | [mobilenet_v1_relu](https://github.com/balancap/tf-imagenet/blob/master/models/mobilenet/mobilenet_v1_relu.py) | 72.9 / 72.2 | 90.6 / 90.5 |
+[MobileNets v2 - Multiplier 1.0](https://arxiv.org/pdf/1801.04381.pdf) | [mobilenet_v2_d1](https://github.com/balancap/tf-imagenet/blob/master/models/mobilenet/mobilenet_v2.py) | 72.1 / 71.4 | 90.5 / 90.1 |
+[MobileNets v2 - Multiplier 1.4](https://arxiv.org/pdf/1801.04381.pdf) | [mobilenet_v2_d14](https://github.com/balancap/tf-imagenet/blob/master/models/mobilenet/mobilenet_v2.py) | 75.0 / 74.6 | 92.0 / 91.9 |
 
 To evaluate a checkpoint, simply use the `eval.py` script as following:
 ```bash
