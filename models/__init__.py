@@ -25,7 +25,8 @@ from .mobilenet import mobilenet_v1_orig, mobilenet_v1_relu, mobilenet_v2
 from .resnet import resnet_v1, resnet_v2
 from .nasnet import nasnet
 
-# from .mobilenet import hex_mobilenet_v1
+# TEST NETS
+from .mobilenet import hex_mobilenet_v1
 
 IMAGENET_MODELS = {
     'googlenet': lambda: inception_v1.InceptionV1(False),
@@ -48,15 +49,18 @@ IMAGENET_MODELS = {
     'resnet_v2_152_299': lambda: resnet_v2.ResNet_v2_152(299),
     'nasnet_v1_small': lambda: nasnet.NASNetV1Small(),
     'nasnet_v1_large': lambda: nasnet.NASNetV1Large(),
-    # 'hex_mobilenet_v1': lambda: hex_mobilenet_v1.HexMobileNetV1(
-    #     ksize=5, regularize_depthwise=False),
-    # 'hex_mobilenet_v1_5x5': lambda: hex_mobilenet_v1.HexMobileNetV1(
-    #     ksize=5, regularize_depthwise=False),
-    # 'hex_mobilenet_v1_5x5_w': lambda: hex_mobilenet_v1.HexMobileNetV1(
-    #     ksize=5, regularize_depthwise=True),
-    # 'hex_mobilenet_v1_3x3': lambda: hex_mobilenet_v1.HexMobileNetV1(
-    #     ksize=3, regularize_depthwise=False),
 }
+
+IMAGENET_MODELS.update({
+    'hex_mobilenet_v1': lambda: hex_mobilenet_v1.HexMobileNetV1(
+        ksize=5, regularize_depthwise=False),
+    'hex_mobilenet_v1_5x5': lambda: hex_mobilenet_v1.HexMobileNetV1(
+        ksize=5, regularize_depthwise=False),
+    'hex_mobilenet_v1_5x5_w': lambda: hex_mobilenet_v1.HexMobileNetV1(
+        ksize=5, regularize_depthwise=True),
+    'hex_mobilenet_v1_3x3': lambda: hex_mobilenet_v1.HexMobileNetV1(
+        ksize=3, regularize_depthwise=False),
+})
 
 def create_model(model_name, dataset):
     """Create a model from a name and a dataset.
