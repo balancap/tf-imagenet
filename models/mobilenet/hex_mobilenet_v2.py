@@ -128,7 +128,7 @@ def hex_mobilenet_v2_def(ksize=5):
 
 
 def hex_mobilenet_v2_base(inputs,
-                          final_endpoint='Conv2d_18',
+                          final_endpoint='Conv2d_19',
                           min_depth=8,
                           depth_multiplier=1.0,
                           conv_defs=None,
