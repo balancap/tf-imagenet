@@ -258,7 +258,9 @@ def hex_mobilenet_v2_base(inputs,
                 else:
                     raise ValueError('Unknown convolution type %s for layer %d'
                                      % (conv_def.ltype, i))
-                in_depth = conv_def.depth
+
+                if 'depth' in conv_def._fields:
+                    in_depth = conv_def.depth
                 # Final end point?
                 if final_endpoint in end_points:
                     return end_points[final_endpoint], end_points
