@@ -18,8 +18,14 @@ MobileNet is a general architecture and can be used for multiple use cases.
 Depending on the use case, it can use different input layer size and different
 head (for example: embeddings, localization and classification).
 
-As described in https://arxiv.org/pdf/1801.04381.pdf
+As described in https://arxiv.org/abs/1704.04861.
+
+    MobileNets: Efficient Convolutional Neural Networks for
+        Mobile Vision Applications
+    Andrew G. Howard, Menglong Zhu, Bo Chen, Dmitry Kalenichenko, Weijun Wang,
+        Tobias Weyand, Marco Andreetto, Hartwig Adam
 """
+# Tensorflow mandates these.
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -29,6 +35,7 @@ import functools
 
 import tensorflow as tf
 import tf_extended as tfx
+from tensorflow.contrib import hex_layers
 
 from models import abstract_model
 
@@ -37,32 +44,34 @@ slim = tf.contrib.slim
 # =========================================================================== #
 # MobileNet model.
 # =========================================================================== #
-class MobileNetV2(abstract_model.Model):
+class HexMobileNetV2(abstract_model.Model):
     """MobileNetV2 model.
     """
-    def __init__(self, depth_multiplier=1.0):
-        self.scope = 'MobileNetV2'
+    def __init__(self, ksize=5, regularize_depthwise=False, depth_multiplier=1.0):
+        self.scope = 'HexMobilenetV2'
+        self.ksize = ksize
+        self.regularize_depthwise = regularize_depthwise
         self.depth_multiplier = depth_multiplier
-        super(MobileNetV2, self).__init__(self.scope, 224, 32, 0.005)
+        super(HexMobileNetV2, self).__init__(self.scope, 224, 32, 0.005)
 
     def forward(self, inputs, num_classes, data_format, is_training):
-        sc = mobilenet_v2_arg_scope(
+        sc = hex_mobilenet_v2_arg_scope(
             is_training=is_training,
             data_format=data_format,
             weight_decay=self.weight_decay,
             use_batch_norm=True,
             batch_norm_decay=0.9997,
             batch_norm_epsilon=0.001,
-            regularize_depthwise=False)
+            regularize_depthwise=self.regularize_depthwise)
         with slim.arg_scope(sc):
-            logits, end_points = mobilenet_v2(
+            logits, end_points = hex_mobilenet_v2(
                 inputs,
                 num_classes=num_classes,
                 dropout_keep_prob=0.9,
                 is_training=is_training,
                 min_depth=8,
                 depth_multiplier=self.depth_multiplier,
-                conv_defs=None,
+                conv_defs=hex_mobilenet_v2_def(self.ksize),
                 prediction_fn=tf.contrib.layers.softmax,
                 spatial_squeeze=True,
                 reuse=None,
@@ -81,44 +90,50 @@ class MobileNetV2(abstract_model.Model):
 # stride is the stride of the convolution
 # depth is the number of channels or filters in a layer
 Conv = namedtuple('Conv', ['kernel', 'stride', 'depth', 'factor'])
-Bottleneck = namedtuple('Bottleneck', ['kernel', 'stride', 'depth', 'factor'])
+HexFromCart = namedtuple('HexFromCart', ['stride', 'downscale', 'extend'])
+HexBottleneck = namedtuple('HexBottleneck', ['kernel', 'stride', 'depth', 'factor'])
 
-# _CONV_DEFS specifies the MobileNet body
-_CONV_DEFS = [
-    Conv(kernel=[3, 3], stride=2, depth=32, factor=1),
-    Bottleneck(kernel=[3, 3], stride=1, depth=16, factor=1),
+def hex_mobilenet_v2_def(ksize=5):
+    """Compact definition of the mobilenet network.
+    """
+    _CONV_DEFS = [
+        Conv(kernel=[3, 3], stride=1, depth=32, factor=1),
+        HexFromCart(stride=1, downscale=True, extend=False),
+        HexBottleneck(kernel=[ksize, ksize], stride=1, depth=16, factor=1),
 
-    Bottleneck(kernel=[3, 3], stride=2, depth=24, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=24, factor=6),
+        HexBottleneck(kernel=[ksize, ksize], stride=2, depth=24, factor=6),
+        HexBottleneck(kernel=[ksize, ksize], stride=1, depth=24, factor=6),
 
-    Bottleneck(kernel=[3, 3], stride=2, depth=32, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=32, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=32, factor=6),
+        HexBottleneck(kernel=[ksize, ksize], stride=2, depth=32, factor=6),
+        HexBottleneck(kernel=[ksize, ksize], stride=1, depth=32, factor=6),
+        HexBottleneck(kernel=[ksize, ksize], stride=1, depth=32, factor=6),
 
-    Bottleneck(kernel=[3, 3], stride=2, depth=64, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=64, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=64, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=64, factor=6),
+        HexBottleneck(kernel=[ksize, ksize], stride=2, depth=64, factor=6),
+        HexBottleneck(kernel=[ksize, ksize], stride=1, depth=64, factor=6),
+        HexBottleneck(kernel=[ksize, ksize], stride=1, depth=64, factor=6),
+        HexBottleneck(kernel=[ksize, ksize], stride=1, depth=64, factor=6),
 
-    Bottleneck(kernel=[3, 3], stride=1, depth=96, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=96, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=96, factor=6),
+        HexBottleneck(kernel=[ksize, ksize], stride=1, depth=96, factor=6),
+        HexBottleneck(kernel=[ksize, ksize], stride=1, depth=96, factor=6),
+        HexBottleneck(kernel=[ksize, ksize], stride=1, depth=96, factor=6),
 
-    Bottleneck(kernel=[3, 3], stride=2, depth=160, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=160, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=160, factor=6),
+        HexBottleneck(kernel=[ksize, ksize], stride=2, depth=160, factor=6),
+        HexBottleneck(kernel=[ksize, ksize], stride=1, depth=160, factor=6),
+        HexBottleneck(kernel=[ksize, ksize], stride=1, depth=160, factor=6),
 
-    Bottleneck(kernel=[3, 3], stride=1, depth=320, factor=6),
-    Conv(kernel=[1, 1], stride=1, depth=1280, factor=1)
-]
+        HexBottleneck(kernel=[ksize, ksize], stride=1, depth=320, factor=6),
+        Conv(kernel=[1, 1], stride=1, depth=1280, factor=1)
+    ]
+    return _CONV_DEFS
 
-def mobilenet_v2_base(inputs,
-                      final_endpoint='Conv2d_18',
-                      min_depth=8,
-                      depth_multiplier=1.0,
-                      conv_defs=None,
-                      output_stride=None,
-                      scope=None):
+
+def hex_mobilenet_v2_base(inputs,
+                          final_endpoint='Conv2d_18',
+                          min_depth=8,
+                          depth_multiplier=1.0,
+                          conv_defs=None,
+                          output_stride=None,
+                          scope=None):
     """Mobilenet v2.
 
     Constructs a Mobilenet v2 network from inputs to the given final endpoint.
@@ -164,12 +179,12 @@ def mobilenet_v2_base(inputs,
         raise ValueError('depth_multiplier is not greater than zero.')
 
     if conv_defs is None:
-        conv_defs = _CONV_DEFS
+        conv_defs = hex_mobilenet_v2_def()
 
     if output_stride is not None and output_stride not in [8, 16, 32]:
         raise ValueError('Only allowed output_stride values are 8, 16, 32.')
 
-    with tf.variable_scope(scope, 'MobilenetV2', [inputs]):
+    with tf.variable_scope(scope, 'Mobilenetv2', [inputs]):
         with slim.arg_scope([slim.conv2d, slim.separable_conv2d], padding='SAME'):
             # The current_stride variable keeps track of the output stride of the
             # activations, i.e., the running product of convolution strides up to the
@@ -202,9 +217,14 @@ def mobilenet_v2_base(inputs,
                     net = slim.conv2d(net, depth(conv_def.depth), conv_def.kernel,
                                       stride=conv_def.stride, scope=end_point)
                     end_points[end_point] = net
-
-                # Bottleneck block.
-                elif isinstance(conv_def, Bottleneck):
+                # Hexagonal to Cartesian convert.
+                elif isinstance(conv_def, HexFromCart):
+                    end_point = end_point_base + '_hex_from_cart'
+                    net = hex_layers.hex_from_cartesian(
+                        net, downscale=conv_def.downscale, extend=conv_def.extend)
+                    end_points[end_point] = net
+                # Hex. bottleneck block.
+                elif isinstance(conv_def, HexBottleneck):
                     # Stride > 1 or different depth: no residual part.
                     # in_depth = tfx.layers.channel_dimension(net.get_shape())
                     res = net if layer_stride == 1 and in_depth == conv_def.depth else None
@@ -214,13 +234,16 @@ def mobilenet_v2_base(inputs,
                     net = slim.conv2d(net, depth(in_depth * conv_def.factor),
                                       [1, 1], stride=1, scope=end_point)
                     end_points[end_point] = net
-                    # Depthwise conv2d.
-                    end_point = end_point_base + '_depthwise'
-                    net = slim.separable_conv2d(net, None, conv_def.kernel,
-                                                depth_multiplier=1,
-                                                stride=layer_stride,
-                                                rate=layer_rate,
-                                                scope=end_point)
+                    # Hex depthwise.
+                    end_point = end_point_base + '_hex_depthwise'
+                    net = hex_layers.hex_depthwise_conv2d(
+                        net, conv_def.kernel,
+                        depth_multiplier=1, stride=1, rate=1,
+                        normalizer_fn=slim.batch_norm, scope=end_point)
+
+                    if layer_stride > 1:
+                        net = hex_layers.hex_downscale2d(
+                            net, rate=2, scope=end_point_base + '_downscale2d')
                     end_points[end_point] = net
                     # Downscale 1x1 conv.
                     end_point = end_point_base + '_down_pointwise'
@@ -232,8 +255,6 @@ def mobilenet_v2_base(inputs,
                     end_point = end_point_base + '_residual'
                     net = tf.add(res, net, name=end_point) if res is not None else net
                     end_points[end_point] = net
-
-                # Unknown...
                 else:
                     raise ValueError('Unknown convolution type %s for layer %d'
                                      % (conv_def.ltype, i))
@@ -242,21 +263,22 @@ def mobilenet_v2_base(inputs,
                 if final_endpoint in end_points:
                     return end_points[final_endpoint], end_points
 
+
     raise ValueError('Unknown final endpoint %s' % final_endpoint)
 
 
-def mobilenet_v2(inputs,
-                 num_classes=1000,
-                 dropout_keep_prob=0.999,
-                 is_training=True,
-                 min_depth=8,
-                 depth_multiplier=1.0,
-                 conv_defs=None,
-                 prediction_fn=tf.contrib.layers.softmax,
-                 spatial_squeeze=True,
-                 reuse=None,
-                 scope='MobilenetV2',
-                 global_pool=False):
+def hex_mobilenet_v2(inputs,
+                     num_classes=1000,
+                     dropout_keep_prob=0.999,
+                     is_training=True,
+                     min_depth=8,
+                     depth_multiplier=1.0,
+                     conv_defs=None,
+                     prediction_fn=tf.contrib.layers.softmax,
+                     spatial_squeeze=True,
+                     reuse=None,
+                     scope='MobilenetV2',
+                     global_pool=False):
     """Mobilenet v2 model for classification.
 
     Args:
@@ -303,10 +325,10 @@ def mobilenet_v2(inputs,
     with tf.variable_scope(scope, 'MobilenetV2', [inputs], reuse=reuse) as scope:
         with slim.arg_scope([slim.batch_norm, slim.dropout],
                             is_training=is_training):
-            net, end_points = mobilenet_v2_base(inputs, scope=scope,
-                                                min_depth=min_depth,
-                                                depth_multiplier=depth_multiplier,
-                                                conv_defs=conv_defs)
+            net, end_points = hex_mobilenet_v2_base(inputs, scope=scope,
+                                                    min_depth=min_depth,
+                                                    depth_multiplier=depth_multiplier,
+                                                    conv_defs=conv_defs)
             with tf.variable_scope('Logits'):
                 if global_pool:
                     # Global average pooling.
@@ -320,7 +342,7 @@ def mobilenet_v2(inputs,
                     end_points['AvgPool_1a'] = net
                 if not num_classes:
                     return net, end_points
-                # 1 x 1 x 1280
+                # 1 x 1 x 1024
                 net = slim.dropout(net, keep_prob=dropout_keep_prob, scope='Dropout_1b')
                 logits = slim.conv2d(net, num_classes, [1, 1], activation_fn=None,
                                      normalizer_fn=None, scope='Conv2d_1c_1x1')
@@ -331,17 +353,17 @@ def mobilenet_v2(inputs,
                 end_points['Predictions'] = prediction_fn(logits, scope='Predictions')
     return logits, end_points
 
-mobilenet_v2.default_image_size = 224
+hex_mobilenet_v2.default_image_size = 224
 
 
-def mobilenet_v2_arg_scope(is_training=True,
-                           data_format='NHWC',
-                           weight_decay=0.00004,
-                           use_batch_norm=True,
-                           batch_norm_decay=0.9997,
-                           batch_norm_epsilon=0.001,
-                           regularize_depthwise=False):
-    """Defines the default MobilenetV2 arg scope.
+def hex_mobilenet_v2_arg_scope(is_training=True,
+                               data_format='NHWC',
+                               weight_decay=0.00004,
+                               use_batch_norm=True,
+                               batch_norm_decay=0.9997,
+                               batch_norm_epsilon=0.001,
+                               regularize_depthwise=False):
+    """Defines the default Mobilenetv2 arg scope.
 
     Args:
         is_training: Whether or not we're training the model.
@@ -375,16 +397,20 @@ def mobilenet_v2_arg_scope(is_training=True,
         depthwise_regularizer = weights_regularizer
     else:
         depthwise_regularizer = None
-    with slim.arg_scope([slim.conv2d, slim.separable_conv2d],
+    with slim.arg_scope([slim.conv2d,
+                         slim.separable_conv2d,
+                         hex_layers.hex_depthwise_convolution2d],
                         weights_initializer=weights_initializer,
                         activation_fn=tf.nn.relu,
                         normalizer_fn=normalizer_fn,
                         normalizer_params=normalizer_params):
         with slim.arg_scope([slim.batch_norm], **batch_norm_params):
             with slim.arg_scope([slim.conv2d], weights_regularizer=weights_regularizer):
-                with slim.arg_scope([slim.separable_conv2d],
+                with slim.arg_scope([slim.separable_conv2d,
+                                     hex_layers.hex_depthwise_convolution2d],
                                     weights_regularizer=depthwise_regularizer):
                     # Data format scope...
                     data_sc = abstract_model.data_format_scope(data_format)
                     with slim.arg_scope(data_sc) as sc:
                         return sc
+
