@@ -50,6 +50,8 @@ python eval.py \
 Publication | Model Name | Top-1 (VGG / Inception) | Top-5  (VGG / Inception) |
 :----:|:------------:|:-------:|:--------:|
 Hex MobileNets v1 | hex_mobilenet_v1_5x5_w | 73.1 / 72.5 | 91.0 / 90.6 |
+Hex MobileNets v2 | hex_mobilenet_v1_5x5_d10 | 73.3 / 72.7 | 91.1 / 90.9 |
+Hex MobileNets v2 | hex_mobilenet_v1_5x5_d14 | 75.7 / 75.1 | 92.5 / 92.4 |
 
 # Install
 
