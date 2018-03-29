@@ -416,7 +416,8 @@ def hex_mobilenet_v2_arg_scope(is_training=True,
     with slim.arg_scope([slim.conv2d,
                          slim.separable_conv2d,
                          hex_layers.hex_depthwise_convolution2d,
-                         hex_rot_depthwise_convolution2d],
+                         hex_rot_depthwise_convolution2d,
+                         hex_rotation_tensor],
                         weights_initializer=weights_initializer,
                         activation_fn=tf.nn.relu,
                         normalizer_fn=normalizer_fn,
@@ -552,7 +553,8 @@ def hex_rotation_gate(
         weights_collections = utils.get_variable_collections(
             variables_collections, 'weights')
         # Rotation weights variable.
-        weights_initializer=initializers.xavier_initializer()
+        weights_initializer=tf.contrib.layers.variance_scaling_initializer(
+            mode='FAN_AVG')
         weights_regularizer=None
         rot_shape = [1, 1, 1, num_filters_in]
         rot_gate_weights = variables.model_variable(
@@ -571,17 +573,20 @@ def hex_rotation_gate(
 
 @add_arg_scope
 def hex_rotation_tensor(
-    inputs,
-    weights_initializer=initializers.xavier_initializer(),
-    weights_regularizer=None,
-    biases_initializer=init_ops.zeros_initializer(),
-    biases_regularizer=None,
-    reuse=None,
-    variables_collections=None,
-    outputs_collections=None,
-    trainable=True,
-    data_format='NHWC',
-    scope=None):
+        inputs,
+        weights_initializer=initializers.xavier_initializer(),
+        weights_regularizer=None,
+        biases_initializer=init_ops.zeros_initializer(),
+        biases_regularizer=None,
+        normalizer_fn=None,
+        normalizer_params=None,
+        activation_fn=None,
+        reuse=None,
+        variables_collections=None,
+        outputs_collections=None,
+        trainable=True,
+        data_format='NHWC',
+        scope=None):
     """Convert a rotation vector to a full one.
     """
     with variable_scope.variable_scope(scope, 'HexRotationTensor', [inputs],
@@ -596,6 +601,9 @@ def hex_rotation_tensor(
             # No NCHW for now...
             raise NotImplementedError()
 
+        activation_fn=None
+        weights_initializer=tf.contrib.layers.variance_scaling_initializer(
+            mode='FAN_IN')
         # 1x1 conv2d + tanh normalization.
         rnet = slim.conv2d(
             inputs, 1, [1, 1],
@@ -605,8 +613,8 @@ def hex_rotation_tensor(
             biases_initializer=biases_initializer,
             biases_regularizer=biases_regularizer,
             activation_fn=None,
-            normalizer_fn=None,
-            normalizer_params={},
+            normalizer_fn=normalizer_fn,
+            normalizer_params=normalizer_params,
             scope='conv_1x1')
         rnet = tf.tanh(rnet)
         # Full rotation tensor.
