@@ -14,6 +14,11 @@ As described in https://arxiv.org/abs/1704.04861.
     Andrew G. Howard, Menglong Zhu, Bo Chen, Dmitry Kalenichenko, Weijun Wang,
         Tobias Weyand, Marco Andreetto, Hartwig Adam
 """
+# Tensorflow mandates these.
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 from tensorflow.contrib.framework.python.ops import add_arg_scope
 from tensorflow.contrib.framework.python.ops import variables
 from tensorflow.contrib.layers.python.layers import initializers
@@ -32,11 +37,6 @@ from tensorflow.python.training import moving_averages
 from tensorflow.python.layers import convolutional as convolutional_layers
 from tensorflow.python.ops import variables as tf_variables
 
-
-# Tensorflow mandates these.
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 from collections import namedtuple
 import functools
@@ -248,7 +248,7 @@ def hex_mobilenet_v2_base(inputs,
 
                     # Hex depthwise.
                     end_point = end_point_base + '_hex_depthwise'
-                    net = hex_layers.hex_rot_depthwise_conv2d(
+                    net = hex_rot_depthwise_conv2d(
                         net,
                         rot_net,
                         conv_def.kernel,
@@ -415,7 +415,7 @@ def hex_mobilenet_v2_arg_scope(is_training=True,
         depthwise_regularizer = None
     with slim.arg_scope([slim.conv2d,
                          slim.separable_conv2d,
-                         hex_layers.hex_depthwise_convolution2d],
+                         hex_layers.hex_depthwise_convolution2d,
                          hex_rot_depthwise_convolution2d],
                         weights_initializer=weights_initializer,
                         activation_fn=tf.nn.relu,
@@ -494,13 +494,12 @@ def hex_rot_depthwise_convolution2d(
             trainable=trainable,
             collections=weights_collections)
 
-        outputs = nn.hex_rot_depthwise_convolution2d(
+        outputs = nn.hex_rot_depthwise_conv2d_native(
             inputs,
             depthwise_weights,
             alpha_tensor,
-            strides,
-            padding,
-            rate=utils.two_element_tuple(rate),
+            strides=strides,
+            padding=padding,
             data_format=data_format)
         num_outputs = depth_multiplier * num_filters_in
 
@@ -537,7 +536,7 @@ def hex_rotation_gate(
     scope=None):
     """Convert a rotation vector to a full one.
     """
-    with variable_scope.variable_scope(scope, 'HexRotationGate', [inputs, alpha_tensor],
+    with variable_scope.variable_scope(scope, 'HexRotationGate', [inputs],
                                        reuse=reuse) as sc:
         # alpha_tensor supposed to have shape of [N,H,W,1]
         inputs = ops.convert_to_tensor(inputs)
@@ -553,8 +552,8 @@ def hex_rotation_gate(
         weights_collections = utils.get_variable_collections(
             variables_collections, 'weights')
         # Rotation weights variable.
-        weights_initializer=initializers.xavier_initializer(),
-        weights_regularizer=None,
+        weights_initializer=initializers.xavier_initializer()
+        weights_regularizer=None
         rot_shape = [1, 1, 1, num_filters_in]
         rot_gate_weights = variables.model_variable(
             'rot_gate_weights',
@@ -611,5 +610,6 @@ def hex_rotation_tensor(
             scope='conv_1x1')
         rnet = tf.tanh(rnet)
         # Full rotation tensor.
-        rnet = hex_rotation_gate(inputs, rnet, reuse=reuse)
+        rnet = hex_rotation_gate(
+            inputs, rnet, reuse=reuse)
         return rnet
