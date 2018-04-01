@@ -33,8 +33,8 @@ FLAGS = tf.flags.FLAGS
 class CheckpointNotFoundException(Exception):
     pass
 
-def restore_checkpoint(sess, ckpt_filename, global_step,
-                       ckpt_scope=None, moving_average_decay=None):
+def restore_checkpoint_fn(ckpt_filename, global_step,
+                          ckpt_scope=None, moving_average_decay=None):
     """Restore variables from a checkpoint file. Using either normal values
     or moving averaged values.
     """
@@ -57,9 +57,10 @@ def restore_checkpoint(sess, ckpt_filename, global_step,
         variables_to_restore = {k.replace(scopes[0], scopes[1]): v
             for k, v in variables_to_restore.items()}
     # Restore method.
+    # variables_to_restore = {}
     fn_restore = tf.contrib.framework.assign_from_checkpoint_fn(
         ckpt_filename, variables_to_restore, ignore_missing_vars=True)
-    fn_restore(sess)
+    return fn_restore
 
 
 def load_checkpoint(saver, sess, ckpt_dir, ckpt_scope=None, moving_average_decay=None):
@@ -70,8 +71,9 @@ def load_checkpoint(saver, sess, ckpt_dir, ckpt_scope=None, moving_average_decay
             os.path.isfile(ckpt_dir + '.meta')):
         # Load directly!
         global_step = 0
-        restore_checkpoint(sess, ckpt_dir, global_step,
-                           ckpt_scope, moving_average_decay)
+        fn_restore = restore_checkpoint_fn(
+            ckpt_dir, global_step, ckpt_scope, moving_average_decay)
+        fn_restore(sess)
         log_fn('Successfully loaded model from %s.' % ckpt_dir)
         return global_step
 
@@ -93,8 +95,9 @@ def load_checkpoint(saver, sess, ckpt_dir, ckpt_scope=None, moving_average_decay
         else:
             global_step = int(global_step)
         # saver.restore(sess, model_checkpoint_path)
-        restore_checkpoint(sess, model_checkpoint_path, global_step,
-                           ckpt_scope, moving_average_decay)
+        fn_restore = restore_checkpoint_fn(
+            model_checkpoint_path, global_step, ckpt_scope, moving_average_decay)
+        fn_restore(sess)
         log_fn('Successfully loaded model from %s.' % ckpt.model_checkpoint_path)
         return global_step
     else:

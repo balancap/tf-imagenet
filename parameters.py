@@ -383,6 +383,9 @@ DEFAULT_PARAMS = {
     'eval_dir':
         _ParamSpec('string', '/tmp/tf_cnn_benchmarks/eval',
                    'Directory where to write eval event logs.'),
+    'ckpt_finetune':
+        _ParamSpec('string', None,
+                   'Path to the checkpoint to fine-tune.'),
     'ckpt_scope':
         _ParamSpec('string', None,
                    'Change the checkpoint main scope. In the form old:new'),
