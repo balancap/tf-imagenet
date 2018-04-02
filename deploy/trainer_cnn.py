@@ -44,7 +44,7 @@ from . import cnn_util
 from . import convnet_builder
 from . import variable_mgr
 
-from .trainer_utils import load_checkpoint
+from .trainer_utils import load_checkpoint, restore_checkpoint_fn
 from .benchmark_cnn import (
     get_data_type, loss_function, create_config_proto, GlobalStepWatcher,
     get_mode_from_params, benchmark_one_step, get_perf_timing_str,
@@ -515,10 +515,21 @@ class TrainerCNN(object):
             # in replicated mode).
             ready_for_local_init_op = tf.report_uninitialized_variables(
                 tf.global_variables())
+        # Restoring a checkpoint to fine-tune.
+        restore_init_fn = None
+        if self.params.ckpt_finetune is not None:
+            restore_init_fn = restore_checkpoint_fn(
+                self.params.ckpt_finetune,
+                0,
+                self.params.ckpt_scope,
+                self.params.ckpt_moving_average_decay)
+
         sv = tf.train.Supervisor(
             is_chief=is_chief,
             logdir=self.params.train_dir,
             ready_for_local_init_op=ready_for_local_init_op,
+            # init_op=restore_init_op,
+            init_fn=restore_init_fn,
             local_init_op=local_var_init_op_group,
             saver=saver,
             global_step=global_step,

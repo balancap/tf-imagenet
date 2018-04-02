@@ -386,6 +386,9 @@ DEFAULT_PARAMS = {
     'ckpt_finetune':
         _ParamSpec('string', None,
                    'Path to the checkpoint to fine-tune.'),
+    'ckpt_moving_average_decay':
+        _ParamSpec('float', None,
+                   'Checkpoint moving average decay.'),
     'ckpt_scope':
         _ParamSpec('string', None,
                    'Change the checkpoint main scope. In the form old:new'),
