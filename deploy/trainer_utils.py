@@ -33,8 +33,11 @@ FLAGS = tf.flags.FLAGS
 class CheckpointNotFoundException(Exception):
     pass
 
-def restore_checkpoint_fn(ckpt_filename, global_step,
-                          ckpt_scope=None, moving_average_decay=None):
+def restore_checkpoint_fn(ckpt_filename,
+                          global_step,
+                          ckpt_scope=None,
+                          moving_average_decay=None,
+                          remove_global_step=False):
     """Restore variables from a checkpoint file. Using either normal values
     or moving averaged values.
     """
@@ -56,6 +59,9 @@ def restore_checkpoint_fn(ckpt_filename, global_step,
         scopes = ckpt_scope.split(':')
         variables_to_restore = {k.replace(scopes[0], scopes[1]): v
             for k, v in variables_to_restore.items()}
+    # Remove global step variable.
+    if remove_global_step:
+        variables_to_restore.pop('global_step', None)
 
     # Replace v{i}/cg/ by vo/cg. UGLY HACK!
     # for i in range(1, 8):

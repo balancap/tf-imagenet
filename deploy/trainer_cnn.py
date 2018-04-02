@@ -522,7 +522,8 @@ class TrainerCNN(object):
                 self.params.ckpt_finetune,
                 0,
                 self.params.ckpt_scope,
-                self.params.ckpt_moving_average_decay)
+                self.params.ckpt_moving_average_decay
+                remove_global_step=True)
 
         sv = tf.train.Supervisor(
             is_chief=is_chief,
