@@ -56,6 +56,12 @@ def restore_checkpoint_fn(ckpt_filename, global_step,
         scopes = ckpt_scope.split(':')
         variables_to_restore = {k.replace(scopes[0], scopes[1]): v
             for k, v in variables_to_restore.items()}
+
+    # Replace v{i}/cg/ by vo/cg. UGLY HACK!
+    for i in range(1, 8):
+        variables_to_restore = {k.replace('v%i/cg/' % i, 'v0/cg/'): v
+            for k, v in variables_to_restore.items()}
+
     # Restore method.
     # variables_to_restore = {}
     fn_restore = tf.contrib.framework.assign_from_checkpoint_fn(
