@@ -605,6 +605,7 @@ def hex_rotation_tensor(
         weights_initializer=tf.contrib.layers.variance_scaling_initializer(
             mode='FAN_IN')
         # Batch norm custom parameters
+        gamma_initializer = tf.constant_initializer(0.01)
         batch_norm_params = {
             'decay': normalizer_params['decay'],
             'epsilon': normalizer_params['epsilon'],
@@ -613,7 +614,7 @@ def hex_rotation_tensor(
             'scale': True,
             'data_format': normalizer_params['data_format'],
             'is_training': normalizer_params['is_training'],
-            'param_initializers': {'gamma': init_ops.zeros_initializer()},
+            'param_initializers': {'gamma': gamma_initializer},
         }
         # 1x1 conv2d + tanh normalization.
         rnet = slim.conv2d(
