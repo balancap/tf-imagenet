@@ -71,8 +71,10 @@ IMAGENET_MODELS.update({
         ksize=5, regularize_depthwise=True, depth_multiplier=1.4),
     'hex_rot_mobilenet_v2_5x5_d1a': lambda: hex_rot_mobilenet_v2a.HexMobileNetV2(
         ksize=5, regularize_depthwise=True, depth_multiplier=1.0),
-    'hex_rot_mobilenet_v2_5x5_d14a': lambda: hex_rot_mobilenet_v2a.HexMobileNetV2(
-        ksize=5, regularize_depthwise=True, depth_multiplier=1.4),
+    'hex_rot_mobilenet_v2_5x5_d1b': lambda: hex_rot_mobilenet_v2b.HexMobileNetV2(
+        ksize=5, regularize_depthwise=True, depth_multiplier=1.0),
+    'hex_rot_mobilenet_v2_5x5_d1c': lambda: hex_rot_mobilenet_v2c.HexMobileNetV2(
+        ksize=5, regularize_depthwise=True, depth_multiplier=1.0),
 })
 
 def create_model(model_name, dataset):

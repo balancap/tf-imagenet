@@ -463,7 +463,7 @@ def hex_rot_depthwise_convolution2d(
     Returns:
         A `Tensor` representing the output of the operation.
     """
-    with variable_scope.variable_scope(scope, 'HexRotDepthwiseConv2d', [inputs],
+    with variable_scope.variable_scope(scope, 'HexDepthwiseConv2d', [inputs],
                                        reuse=reuse) as sc:
         inputs = ops.convert_to_tensor(inputs)
         alpha_tensor = ops.convert_to_tensor(alpha_tensor)
@@ -487,7 +487,7 @@ def hex_rot_depthwise_convolution2d(
         depthwise_shape = [kernel_h, kernel_w,
                            num_filters_in, depth_multiplier]
         depthwise_weights = variables.model_variable(
-            'hex_rot_depthwise_weights',
+            'hex_depthwise_weights',
             shape=depthwise_shape,
             dtype=dtype,
             initializer=weights_initializer,
@@ -527,14 +527,14 @@ hex_rot_depthwise_conv2d = hex_rot_depthwise_convolution2d
 
 @add_arg_scope
 def hex_rotation_gate(
-    inputs,
-    alpha_tensor,
-    reuse=None,
-    variables_collections=None,
-    outputs_collections=None,
-    trainable=True,
-    data_format='NHWC',
-    scope=None):
+        inputs,
+        alpha_tensor,
+        reuse=None,
+        variables_collections=None,
+        outputs_collections=None,
+        trainable=True,
+        data_format='NHWC',
+        scope=None):
     """Convert a rotation vector to a full one.
     """
     with variable_scope.variable_scope(scope, 'HexRotationGate', [inputs],
@@ -604,6 +604,17 @@ def hex_rotation_tensor(
         activation_fn=None
         weights_initializer=tf.contrib.layers.variance_scaling_initializer(
             mode='FAN_IN')
+        # Batch norm custom parameters
+        batch_norm_params = {
+            'decay': normalizer_params['decay'],
+            'epsilon': normalizer_params['epsilon'],
+            'updates_collections': tf.GraphKeys.UPDATE_OPS,
+            'fused': True,
+            'scale': True,
+            'data_format': normalizer_params['data_format'],
+            'is_training': normalizer_params['is_training'],
+            'param_initializers': {'gamma': init_ops.zeros_initializer()},
+        }
         # 1x1 conv2d + tanh normalization.
         rnet = slim.conv2d(
             inputs, 1, [1, 1],
@@ -614,7 +625,7 @@ def hex_rotation_tensor(
             biases_regularizer=biases_regularizer,
             activation_fn=None,
             normalizer_fn=normalizer_fn,
-            normalizer_params=normalizer_params,
+            normalizer_params=batch_norm_params,
             scope='conv_1x1')
         rnet = tf.tanh(rnet)
         # Full rotation tensor.
