@@ -19,6 +19,7 @@ from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 
 # from deploy import trainer_utils
+import math
 
 from tensorflow.contrib.data.python.ops import interleave_ops
 from tensorflow.contrib.data.python.ops import batching
@@ -32,6 +33,7 @@ from .image import get_image_resize_method, distort_color
 def eval_image_vgg(image,
                    height,
                    width,
+                   angle,
                    batch_position,
                    resize_method,
                    summary_verbosity=0):
@@ -68,15 +70,21 @@ def eval_image_vgg(image,
         if summary_verbosity >= 3:
             tf.summary.image(
                 'original_image', tf.expand_dims(image, 0))
-
         shape = tf.shape(image)
         image_height = shape[0]
         image_width = shape[1]
         image_height_float = tf.cast(image_height, tf.float32)
         image_width_float = tf.cast(image_width, tf.float32)
 
-        scale_factor = 1.15
+        # Rotation of the image.
+        if angle is not None:
+            image = tf.contrib.image.rotate(
+                image,
+                angle,
+                interpolation='BILINEAR',
+                name='eval_rotation')
 
+        scale_factor = 1.15
         # Compute resize_height and resize_width to be the minimum values such that
         #   1. The aspect ratio is maintained (i.e. resize_height / resize_width is
         #      image_height / image_width), and
@@ -115,6 +123,7 @@ def eval_image_vgg(image,
 def eval_image_inception(image,
                          height,
                          width,
+                         angle,
                          batch_position,
                          resize_method,
                          summary_verbosity=0):
@@ -149,6 +158,14 @@ def eval_image_inception(image,
         # shape = tf.shape(image)
         # image_height = shape[0]
         # image_width = shape[1]
+
+        # Rotation of the image.
+        if angle is not None:
+            image = tf.contrib.image.rotate(
+                image,
+                angle,
+                interpolation='BILINEAR',
+                name='eval_rotation')
 
         # Crop the central region of the image with an area containing 87.5% of the original.
         central_fraction=0.875
@@ -297,6 +314,7 @@ class RecordInputImagePreprocessor(object):
                  resize_method,
                  eval_method,
                  shift_ratio,
+                 random_rotation,
                  summary_verbosity,
                  distort_color_in_yiq,
                  fuse_decode_and_crop):
@@ -309,6 +327,7 @@ class RecordInputImagePreprocessor(object):
         self.resize_method = resize_method
         self.eval_method = eval_method
         self.shift_ratio = shift_ratio
+        self.random_rotation = random_rotation
         self.distortions = distortions
         self.distort_color_in_yiq = distort_color_in_yiq
         self.fuse_decode_and_crop = fuse_decode_and_crop
@@ -324,8 +343,11 @@ class RecordInputImagePreprocessor(object):
         """Preprocessing image_buffer as a function of its batch position."""
         if self.train:
             image = train_image(image_buffer, self.height, self.width, bbox,
-                                batch_position, self.resize_method, self.distortions,
-                                None, summary_verbosity=self.summary_verbosity,
+                                batch_position,
+                                self.resize_method,
+                                self.distortions,
+                                None,
+                                summary_verbosity=self.summary_verbosity,
                                 distort_color_in_yiq=self.distort_color_in_yiq,
                                 fuse_decode_and_crop=self.fuse_decode_and_crop)
         else:
@@ -337,7 +359,20 @@ class RecordInputImagePreprocessor(object):
             eval_image = eval_methods.get(self.eval_method, eval_image_vgg)
             image = tf.image.decode_jpeg(
                 image_buffer, channels=3, dct_method='INTEGER_FAST')
-            image = eval_image(image, self.height, self.width, batch_position,
+            # Random rotation.
+            angle = None
+            if self.random_rotation is not None:
+                max_angle = abs(self.random_rotation) / 180. * math.pi
+                angle = tf.random_uniform(
+                    [],
+                    minval=-max_angle,
+                    maxval=max_angle,
+                    dtype=tf.float32)
+            image = eval_image(image,
+                               self.height,
+                               self.width,
+                               angle,
+                               batch_position,
                                self.resize_method,
                                summary_verbosity=self.summary_verbosity)
         # Note: image is now float32 [height,width,3] with range [0, 255]

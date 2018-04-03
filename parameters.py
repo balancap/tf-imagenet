@@ -124,6 +124,9 @@ DEFAULT_PARAMS = {
         _ParamSpec('boolean', True,
                    'Enable/disable distortions during image preprocessing. '
                    'These include bbox and color distortions.'),
+    'random_rotation':
+        _ParamSpec('float', None,
+                   'Maximum angle used for random rotation during training or eval.'),
     'use_datasets':
         _ParamSpec('boolean', True,
                    'Enable use of datasets for input pipeline'),

@@ -1219,6 +1219,7 @@ class TrainerCNN(object):
             resize_method=self.resize_method,
             eval_method=self.params.eval_method,
             shift_ratio=shift_ratio,
+            random_rotation=self.params.random_rotation,
             summary_verbosity=self.params.summary_verbosity,
             distort_color_in_yiq=self.params.distort_color_in_yiq,
             fuse_decode_and_crop=self.params.fuse_decode_and_crop)
