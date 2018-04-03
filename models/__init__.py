@@ -27,7 +27,7 @@ from .nasnet import nasnet
 
 # TEST NETS
 from .mobilenet import hex_mobilenet_v1, hex_mobilenet_v2, hex_rot_mobilenet_v2
-from .mobilenet import hex_rot_mobilenet_v2a, hex_rot_mobilenet_v2b, hex_rot_mobilenet_v2c, hex_rot_mobilenet_v2d
+from .mobilenet import hex_rot_mobilenet_v2a, hex_rot_mobilenet_v2b, hex_rot_mobilenet_v2c, hex_rot_mobilenet_v2d, hex_rot_mobilenet_v2e
 
 IMAGENET_MODELS = {
     'googlenet': lambda: inception_v1.InceptionV1(False),
@@ -76,6 +76,8 @@ IMAGENET_MODELS.update({
     'hex_rot_mobilenet_v2_5x5_d1c': lambda: hex_rot_mobilenet_v2c.HexMobileNetV2(
         ksize=5, regularize_depthwise=True, depth_multiplier=1.0),
     'hex_rot_mobilenet_v2_5x5_d1d': lambda: hex_rot_mobilenet_v2d.HexMobileNetV2(
+        ksize=5, regularize_depthwise=True, depth_multiplier=1.0),
+    'hex_rot_mobilenet_v2_5x5_d1e': lambda: hex_rot_mobilenet_v2e.HexMobileNetV2(
         ksize=5, regularize_depthwise=True, depth_multiplier=1.0),
 })
 
