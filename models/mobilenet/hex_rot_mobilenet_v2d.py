@@ -556,6 +556,7 @@ def hex_rotation_gate(
         # Rotation weights variable.
         weights_initializer=tf.contrib.layers.variance_scaling_initializer(
             mode='FAN_AVG')
+        # weights_initializer =
         weights_regularizer=None
         rot_shape = [1, 1, 1, num_filters_in]
         rot_gate_weights = variables.model_variable(
