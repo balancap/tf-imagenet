@@ -296,8 +296,8 @@ def train_image(image_buffer,
             distorted_image = tf.contrib.image.rotate(
                 distorted_image,
                 angle,
-                interpolation='NEAREST',
-                name='eval_rotation')
+                interpolation='BILINEAR',
+                name='train_rotation')
 
         if distortions:
             # Randomly distort the colors.

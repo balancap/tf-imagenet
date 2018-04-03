@@ -44,7 +44,7 @@ import functools
 import tensorflow as tf
 import tf_extended as tfx
 from tensorflow.contrib import hex_layers
-import hex_tools
+from . import hex_tools
 
 from models import abstract_model
 
