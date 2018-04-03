@@ -190,6 +190,7 @@ def train_image(image_buffer,
                 batch_position,
                 resize_method,
                 distortions,
+                random_rotation,
                 scope=None,
                 summary_verbosity=0,
                 distort_color_in_yiq=False,
@@ -284,6 +285,19 @@ def train_image(image_buffer,
 
         # Randomly flip the image horizontally.
         distorted_image = tf.image.random_flip_left_right(distorted_image)
+        # Rotation of the image.
+        if random_rotation is not None:
+            max_angle = abs(random_rotation) / 180. * math.pi
+            angle = tf.random_uniform(
+                [],
+                minval=-max_angle,
+                maxval=max_angle,
+                dtype=tf.float32)
+            distorted_image = tf.contrib.image.rotate(
+                distorted_image,
+                angle,
+                interpolation='NEAREST',
+                name='eval_rotation')
 
         if distortions:
             # Randomly distort the colors.
@@ -346,6 +360,7 @@ class RecordInputImagePreprocessor(object):
                                 batch_position,
                                 self.resize_method,
                                 self.distortions,
+                                self.random_rotation,
                                 None,
                                 summary_verbosity=self.summary_verbosity,
                                 distort_color_in_yiq=self.distort_color_in_yiq,
