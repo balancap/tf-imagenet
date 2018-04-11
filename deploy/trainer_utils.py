@@ -54,6 +54,22 @@ def restore_checkpoint_fn(ckpt_filename,
         variables_to_restore = tf.contrib.framework.get_variables_to_restore()
         # Convert list to dict.
         variables_to_restore = {v.op.name: v for v in variables_to_restore}
+
+    # HACK: no moving average for mean and variance in batch norm...
+    variables_to_restore_tmp = {}
+    for k, v in variables_to_restore.items():
+        if 'moving_mean/ExponentialMovingAverage' in k:
+            s1 = 'moving_mean/ExponentialMovingAverage'
+            s2 = 'moving_mean'
+            variables_to_restore_tmp[k.replace(s1, s2)] = v
+        elif 'moving_variance/ExponentialMovingAverage' in k:
+            s1 = 'moving_variance/ExponentialMovingAverage'
+            s2 = 'moving_variance'
+            variables_to_restore_tmp[k.replace(s1, s2)] = v
+        else:
+            variables_to_restore_tmp[k] = v
+    variables_to_restore = variables_to_restore_tmp
+
     # Update the scope of variables.
     if ckpt_scope:
         scopes = ckpt_scope.split(':')

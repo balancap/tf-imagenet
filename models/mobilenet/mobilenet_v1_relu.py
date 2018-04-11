@@ -137,7 +137,7 @@ class MobileNetV1(abstract_model.Model):
             logits, end_points = mobilenet_v1(
                 inputs,
                 num_classes=num_classes,
-                dropout_keep_prob=0.9,
+                dropout_keep_prob=0.8,
                 is_training=is_training,
                 min_depth=8,
                 depth_multiplier=1.0,

@@ -59,7 +59,7 @@ class MobileNetV2(abstract_model.Model):
                 logits, end_points = mobilenet(
                     inputs,
                     num_classes=1001,
-                    depth_multiplier=1.0,
+                    depth_multiplier=self.depth_multiplier,
                     scope='MobilenetV2',
                     conv_defs=None,
                     finegrain_classification_mode=False,
@@ -71,7 +71,7 @@ class MobileNetV2(abstract_model.Model):
         logits, end_points = mobilenet(
             inputs,
             num_classes=1001,
-            depth_multiplier=1.0,
+            depth_multiplier=self.depth_multiplier,
             scope='MobilenetV2',
             conv_defs=None,
             finegrain_classification_mode=False,
