@@ -28,4 +28,4 @@ python train.py \
     --label_smoothing=0.1 \
     --gradient_clip=10.0 \
     --distortions=true \
-    --model=mobilenet_v2_d1 &
+    --model=mobilenet_v2_d1
