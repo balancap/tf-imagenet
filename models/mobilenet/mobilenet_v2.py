@@ -25,7 +25,6 @@ from __future__ import division
 from __future__ import print_function
 
 from collections import namedtuple
-import functools
 
 import tensorflow as tf
 import tf_extended as tfx
@@ -40,9 +39,10 @@ slim = tf.contrib.slim
 class MobileNetV2(abstract_model.Model):
     """MobileNetV2 model.
     """
-    def __init__(self, depth_multiplier=1.0):
+    def __init__(self, depth_multiplier=1.0, kernel_size=3):
         self.scope = 'MobileNetV2'
         self.depth_multiplier = depth_multiplier
+        self.ksize = kernel_size
         super(MobileNetV2, self).__init__(self.scope, 224, 32, 0.005)
 
     def forward(self, inputs, num_classes, data_format, is_training):
@@ -62,7 +62,7 @@ class MobileNetV2(abstract_model.Model):
                 is_training=is_training,
                 min_depth=8,
                 depth_multiplier=self.depth_multiplier,
-                conv_defs=None,
+                conv_defs=mobilenet_v2_def(self.ksize),
                 prediction_fn=tf.contrib.layers.softmax,
                 spatial_squeeze=True,
                 reuse=None,
@@ -83,34 +83,38 @@ class MobileNetV2(abstract_model.Model):
 Conv = namedtuple('Conv', ['kernel', 'stride', 'depth', 'factor'])
 Bottleneck = namedtuple('Bottleneck', ['kernel', 'stride', 'depth', 'factor'])
 
-# _CONV_DEFS specifies the MobileNet body
-_CONV_DEFS = [
-    Conv(kernel=[3, 3], stride=2, depth=32, factor=1),
-    Bottleneck(kernel=[3, 3], stride=1, depth=16, factor=1),
+def mobilenet_v2_def(ksize=3):
+    """Compact definition of the mobilenet body network.
+    """
+    _CONV_DEFS = [
+        Conv(kernel=[3, 3], stride=2, depth=32, factor=1),
+        Bottleneck(kernel=[ksize, ksize], stride=1, depth=16, factor=1),
 
-    Bottleneck(kernel=[3, 3], stride=2, depth=24, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=24, factor=6),
+        Bottleneck(kernel=[ksize, ksize], stride=2, depth=24, factor=6),
+        Bottleneck(kernel=[ksize, ksize], stride=1, depth=24, factor=6),
 
-    Bottleneck(kernel=[3, 3], stride=2, depth=32, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=32, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=32, factor=6),
+        Bottleneck(kernel=[ksize, ksize], stride=2, depth=32, factor=6),
+        Bottleneck(kernel=[ksize, ksize], stride=1, depth=32, factor=6),
+        Bottleneck(kernel=[ksize, ksize], stride=1, depth=32, factor=6),
 
-    Bottleneck(kernel=[3, 3], stride=2, depth=64, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=64, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=64, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=64, factor=6),
+        Bottleneck(kernel=[ksize, ksize], stride=2, depth=64, factor=6),
+        Bottleneck(kernel=[ksize, ksize], stride=1, depth=64, factor=6),
+        Bottleneck(kernel=[ksize, ksize], stride=1, depth=64, factor=6),
+        Bottleneck(kernel=[ksize, ksize], stride=1, depth=64, factor=6),
 
-    Bottleneck(kernel=[3, 3], stride=1, depth=96, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=96, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=96, factor=6),
+        Bottleneck(kernel=[ksize, ksize], stride=1, depth=96, factor=6),
+        Bottleneck(kernel=[ksize, ksize], stride=1, depth=96, factor=6),
+        Bottleneck(kernel=[ksize, ksize], stride=1, depth=96, factor=6),
 
-    Bottleneck(kernel=[3, 3], stride=2, depth=160, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=160, factor=6),
-    Bottleneck(kernel=[3, 3], stride=1, depth=160, factor=6),
+        Bottleneck(kernel=[ksize, ksize], stride=2, depth=160, factor=6),
+        Bottleneck(kernel=[ksize, ksize], stride=1, depth=160, factor=6),
+        Bottleneck(kernel=[ksize, ksize], stride=1, depth=160, factor=6),
 
-    Bottleneck(kernel=[3, 3], stride=1, depth=320, factor=6),
-    Conv(kernel=[1, 1], stride=1, depth=1280, factor=1)
-]
+        Bottleneck(kernel=[ksize, ksize], stride=1, depth=320, factor=6),
+        Conv(kernel=[1, 1], stride=1, depth=1280, factor=1)
+    ]
+    return _CONV_DEFS
+
 
 def mobilenet_v2_base(inputs,
                       final_endpoint='Conv2d_18',
@@ -164,7 +168,7 @@ def mobilenet_v2_base(inputs,
         raise ValueError('depth_multiplier is not greater than zero.')
 
     if conv_defs is None:
-        conv_defs = _CONV_DEFS
+        conv_defs = mobilenet_v2_def()
 
     if output_stride is not None and output_stride not in [8, 16, 32]:
         raise ValueError('Only allowed output_stride values are 8, 16, 32.')
