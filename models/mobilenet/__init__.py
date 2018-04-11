@@ -39,8 +39,14 @@ def get_imagenet_models():
         'tf_mobilenet_v2_d14': lambda: tf_mobilenet_v2.MobileNetV2(depth_multiplier=1.4),
         'mobilenet_v1_orig': lambda: mobilenet_v1_orig.MobileNetV1(),
         'mobilenet_v1_relu': lambda: mobilenet_v1_relu.MobileNetV1(),
-        'mobilenet_v2_d1': lambda: mobilenet_v2.MobileNetV2(depth_multiplier=1.0),
-        'mobilenet_v2_d14': lambda: mobilenet_v2.MobileNetV2(depth_multiplier=1.4),
+        'mobilenet_v2_d1': lambda: mobilenet_v2.MobileNetV2(
+            depth_multiplier=1.0, kernel_size=3),
+        'mobilenet_v2_d14': lambda: mobilenet_v2.MobileNetV2(
+            depth_multiplier=1.4, kernel_size=3),
+        'mobilenet_v2_k5_d1': lambda: mobilenet_v2.MobileNetV2(
+            depth_multiplier=1.0, kernel_size=5),
+        'mobilenet_v2_k5_d14': lambda: mobilenet_v2.MobileNetV2(
+            depth_multiplier=1.4, kernel_size=5),
     }
     if ADD_HEX_MOBILENETS:
         d.update({
