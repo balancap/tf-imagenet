@@ -17,17 +17,20 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+
 import collections
 import contextlib
 import copy
 import os
 
 import tensorflow as tf
-
-
 slim = tf.contrib.slim
 
 
+
+# =========================================================================== #
+# Functional definition.
+# =========================================================================== #
 @slim.add_arg_scope
 def apply_activation(x, name=None, activation_fn=None):
   return activation_fn(x, name=name) if activation_fn else x

@@ -19,6 +19,7 @@ from __future__ import print_function
 
 # Original nets
 from . import mobilenet_v1_orig, mobilenet_v1_relu, mobilenet_v2
+from . import tf_mobilenet_v2
 
 # TEST NETS
 from . import hex_mobilenet_v1, hex_mobilenet_v2, hex_rot_mobilenet_v2
@@ -31,6 +32,8 @@ def get_imagenet_models():
     """Get the list of MobileNets models.
     """
     d = {
+        'tf_mobilenet_v2_d10': lambda: tf_mobilenet_v2.MobileNetV2(depth_multiplier=1.0),
+        'tf_mobilenet_v2_d14': lambda: tf_mobilenet_v2.MobileNetV2(depth_multiplier=1.4),
         'mobilenet_v1_orig': lambda: mobilenet_v1_orig.MobileNetV1(),
         'mobilenet_v1_relu': lambda: mobilenet_v1_relu.MobileNetV1(),
         'mobilenet_v2_d1': lambda: mobilenet_v2.MobileNetV2(depth_multiplier=1.0),

@@ -27,14 +27,62 @@ from __future__ import print_function
 import copy
 
 import tensorflow as tf
+import tf_extended as tfx
 
-from nets.mobilenet import conv_blocks as ops
-from nets.mobilenet import mobilenet as lib
+from models import abstract_model
+from . import tf_conv_blocks as ops
+from . import tf_mobilenet_v1 as lib
 
 slim = tf.contrib.slim
 op = lib.op
-
 expand_input = ops.expand_input_by_factor
+
+# =========================================================================== #
+# MobileNet model.
+# =========================================================================== #
+class MobileNetV2(abstract_model.Model):
+    """MobileNetV2 model.
+    """
+    def __init__(self, depth_multiplier=1.0):
+        self.scope = 'MobilenetV2'
+        self.depth_multiplier = depth_multiplier
+        super(MobileNetV2, self).__init__(self.scope, 224, 32, 0.005)
+
+    def forward(self, inputs, num_classes, data_format, is_training):
+        # Training model
+        if is_training:
+            sc = training_scope(
+                weight_decay=self.weight_decay,
+                batch_norm_decay=0.9997,
+                dropout_keep_prob=0.8)
+            with slim.arg_scope(sc):
+                logits, end_points = mobilenet(
+                    inputs,
+                    num_classes=1001,
+                    depth_multiplier=1.0,
+                    scope='MobilenetV2',
+                    conv_defs=None,
+                    finegrain_classification_mode=False,
+                    min_depth=None,
+                    divisible_by=None)
+                return logits, end_points
+
+        # Eval model
+        logits, end_points = mobilenet(
+            inputs,
+            num_classes=1001,
+            depth_multiplier=1.0,
+            scope='MobilenetV2',
+            conv_defs=None,
+            finegrain_classification_mode=False,
+            min_depth=None,
+            divisible_by=None)
+        return logits, end_points
+
+
+# =========================================================================== #
+# Functional definition.
+# =========================================================================== #
 
 # pyformat: disable
 # Architecture: https://arxiv.org/abs/1801.04381
