@@ -22,12 +22,14 @@ from .cifar10 import Cifar10Data, CIFAR10_NUM_TRAIN_IMAGES, CIFAR10_NUM_VAL_IMAG
 def create_dataset(data_dir, data_name, data_subset):
     """Create a Dataset instance based on data_dir and data_name.
     """
+
     supported_datasets = {
         'synthetic': SyntheticData,
         'imagenet': ImagenetData,
         'cifar10': Cifar10Data,
     }
     if not data_dir:
+        print('WARNING: no dataset directory provided, using SYNTHETIC dataset.')
         data_name = 'synthetic'
 
     if data_name is None:
