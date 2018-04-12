@@ -116,6 +116,56 @@ def mobilenet_v2_def(ksize=3):
     return _CONV_DEFS
 
 
+def block_conv(idx, net, block_def, depth_fn, end_points):
+    """Construct a convolution block.
+    """
+    end_point = 'Conv2d_%d' % idx
+    net = slim.conv2d(net, depth_fn(block_def.depth), block_def.kernel,
+                      stride=block_def.stride, scope=end_point)
+    end_points[end_point] = net
+    return net
+
+
+def block_bottleneck(idx,
+                     net,
+                     block_def,
+                     in_depth,
+                     depth_fn,
+                     layer_stride,
+                     layer_rate,
+                     end_points):
+    """Construct a bottleneck block.
+    """
+    end_point_base = 'Conv2d_%d' % idx
+    # Stride > 1 or different depth: no residual part.
+    # in_depth = tfx.layers.channel_dimension(net.get_shape())
+    res = net if layer_stride == 1 and in_depth == block_def.depth else None
+
+    # Increase depth with 1x1 conv.
+    end_point = end_point_base + '_up_pointwise'
+    net = slim.conv2d(net, depth_fn(in_depth * block_def.factor),
+                      [1, 1], stride=1, scope=end_point)
+    end_points[end_point] = net
+    # Depthwise conv2d.
+    end_point = end_point_base + '_depthwise'
+    net = slim.separable_conv2d(net, None, block_def.kernel,
+                                depth_multiplier=1,
+                                stride=layer_stride,
+                                rate=layer_rate,
+                                scope=end_point)
+    end_points[end_point] = net
+    # Downscale 1x1 conv.
+    end_point = end_point_base + '_down_pointwise'
+    net = slim.conv2d(net, depth_fn(block_def.depth),
+                      [1, 1], activation_fn=None,
+                      stride=1, scope=end_point)
+    # Residual connection?
+    end_point = end_point_base + '_residual'
+    net = tf.add(res, net, name=end_point) if res is not None else net
+    end_points[end_point] = net
+    return net
+
+
 def mobilenet_v2_base(inputs,
                       final_endpoint='Conv2d_18',
                       min_depth=8,
@@ -187,7 +237,6 @@ def mobilenet_v2_base(inputs,
             net = inputs
             in_depth = 3
             for i, conv_def in enumerate(conv_defs):
-                end_point_base = 'Conv2d_%d' % i
                 if output_stride is not None and current_stride == output_stride:
                     # If we have reached the target output_stride, then we need to employ
                     # atrous convolution with stride=1 and multiply the atrous rate by the
@@ -202,41 +251,12 @@ def mobilenet_v2_base(inputs,
 
                 # Normal conv2d.
                 if isinstance(conv_def, Conv):
-                    end_point = end_point_base
-                    net = slim.conv2d(net, depth(conv_def.depth), conv_def.kernel,
-                                      stride=conv_def.stride, scope=end_point)
-                    end_points[end_point] = net
-
+                    net = block_conv(i, net, conv_def, depth, end_points)
                 # Bottleneck block.
                 elif isinstance(conv_def, Bottleneck):
-                    # Stride > 1 or different depth: no residual part.
-                    # in_depth = tfx.layers.channel_dimension(net.get_shape())
-                    res = net if layer_stride == 1 and in_depth == conv_def.depth else None
-
-                    # Increase depth with 1x1 conv.
-                    end_point = end_point_base + '_up_pointwise'
-                    net = slim.conv2d(net, depth(in_depth * conv_def.factor),
-                                      [1, 1], stride=1, scope=end_point)
-                    end_points[end_point] = net
-                    # Depthwise conv2d.
-                    end_point = end_point_base + '_depthwise'
-                    net = slim.separable_conv2d(net, None, conv_def.kernel,
-                                                depth_multiplier=1,
-                                                stride=layer_stride,
-                                                rate=layer_rate,
-                                                scope=end_point)
-                    end_points[end_point] = net
-                    # Downscale 1x1 conv.
-                    end_point = end_point_base + '_down_pointwise'
-                    net = slim.conv2d(net, depth(conv_def.depth),
-                                      [1, 1], activation_fn=None,
-                                      stride=1, scope=end_point)
-                    # Residual connection?
-                    # print(net, res, end_point, in_depth, conv_def.depth)
-                    end_point = end_point_base + '_residual'
-                    net = tf.add(res, net, name=end_point) if res is not None else net
-                    end_points[end_point] = net
-
+                    net = block_bottleneck(
+                        i, net, conv_def, in_depth, depth,
+                        layer_stride, layer_rate, end_points)
                 # Unknown...
                 else:
                     raise ValueError('Unknown convolution type %s for layer %d'
