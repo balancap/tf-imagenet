@@ -1,3 +1,6 @@
+# MobileNet v2 training
+
+```bash
 python train.py \
     --variable_update=replicated \
     --all_reduce_spec=nccl \
@@ -29,3 +32,8 @@ python train.py \
     --gradient_clip=10.0 \
     --distortions=true \
     --model=mobilenet_v2_d1
+```
+
+```bash
+nohup python eval.py --train_dir=${TRAIN_DIR}  --ckpt_scope=v/cg/:v0/cg/  --moving_average_decay=0.9999 &
+```
