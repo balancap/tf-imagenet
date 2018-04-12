@@ -4,7 +4,7 @@
 python train.py \
     --variable_update=replicated \
     --all_reduce_spec=nccl \
-    --local_parameter_device=cpu \
+    --local_parameter_device=gpu \
     --print_training_accuracy=true \
     --gpu_memory_frac_for_testing=0.8 \
     --tf_random_seed=1234 \
