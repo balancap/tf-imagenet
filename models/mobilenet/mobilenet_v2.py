@@ -39,9 +39,10 @@ slim = tf.contrib.slim
 class MobileNetV2(abstract_model.Model):
     """MobileNetV2 model.
     """
-    def __init__(self, depth_multiplier=1.0, kernel_size=3):
+    def __init__(self, depth_multiplier=1.0, regularize_depthwise=False, kernel_size=3):
         self.scope = 'MobileNetV2'
         self.depth_multiplier = depth_multiplier
+        self.regularize_depthwise = regularize_depthwise
         self.ksize = kernel_size
         super(MobileNetV2, self).__init__(self.scope, 224, 32, 0.005)
 
@@ -53,7 +54,7 @@ class MobileNetV2(abstract_model.Model):
             use_batch_norm=True,
             batch_norm_decay=0.9997,
             batch_norm_epsilon=0.001,
-            regularize_depthwise=False)
+            regularize_depthwise=self.regularize_depthwise)
         with slim.arg_scope(sc):
             logits, end_points = mobilenet_v2(
                 inputs,
