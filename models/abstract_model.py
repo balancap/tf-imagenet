@@ -198,8 +198,6 @@ def data_format_scope(data_format):
                          tfx.layers.spatial_squeeze,
                          tfx.layers.spatial_mean,
                          tfx.layers.ksize_for_squeezing,
-                         tfx.layers.channel_dimension,
-                         tfx.layers.drop_path_depth,
-                         tfx.layers.drop_path],
+                         tfx.layers.channel_dimension],
                         data_format=data_format) as sc:
         return sc

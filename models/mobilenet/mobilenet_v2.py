@@ -33,17 +33,24 @@ from models import abstract_model
 
 slim = tf.contrib.slim
 
+TOTAL_TRAINING_STEPS = 250000
+
 # =========================================================================== #
 # MobileNet model.
 # =========================================================================== #
 class MobileNetV2(abstract_model.Model):
     """MobileNetV2 model.
     """
-    def __init__(self, depth_multiplier=1.0, regularize_depthwise=False, kernel_size=3):
+    def __init__(self,
+                 depth_multiplier=1.0,
+                 regularize_depthwise=False,
+                 kernel_size=3,
+                 dp_keep_prob=1.0):
         self.scope = 'MobileNetV2'
         self.depth_multiplier = depth_multiplier
         self.regularize_depthwise = regularize_depthwise
         self.ksize = kernel_size
+        self.dp_keep_prob = dp_keep_prob
         super(MobileNetV2, self).__init__(self.scope, 224, 32, 0.005)
 
     def forward(self, inputs, num_classes, data_format, is_training):
@@ -60,6 +67,7 @@ class MobileNetV2(abstract_model.Model):
                 inputs,
                 num_classes=num_classes,
                 dropout_keep_prob=0.8,
+                drop_path_keep_prob=self.dp_keep_prob,
                 is_training=is_training,
                 min_depth=8,
                 depth_multiplier=self.depth_multiplier,
@@ -134,6 +142,8 @@ def block_bottleneck(idx,
                      depth_fn,
                      layer_stride,
                      layer_rate,
+                     drop_path_keep_prob,
+                     nb_layers,
                      end_points):
     """Construct a bottleneck block.
     """
@@ -155,6 +165,9 @@ def block_bottleneck(idx,
                                 rate=layer_rate,
                                 scope=end_point)
     end_points[end_point] = net
+    # Drop path...
+    net = tfx.layers.drop_path_depth(
+        net, drop_path_keep_prob, idx, nb_layers, TOTAL_TRAINING_STEPS)
     # Downscale 1x1 conv.
     end_point = end_point_base + '_down_pointwise'
     net = slim.conv2d(net, depth_fn(block_def.depth),
@@ -171,6 +184,7 @@ def mobilenet_v2_base(inputs,
                       final_endpoint='Conv2d_18',
                       min_depth=8,
                       depth_multiplier=1.0,
+                      drop_path_keep_prob=1.0,
                       conv_defs=None,
                       output_stride=None,
                       scope=None):
@@ -257,7 +271,10 @@ def mobilenet_v2_base(inputs,
                 elif isinstance(conv_def, Bottleneck):
                     net = block_bottleneck(
                         i, net, conv_def, in_depth, depth,
-                        layer_stride, layer_rate, end_points)
+                        layer_stride, layer_rate,
+                        drop_path_keep_prob=drop_path_keep_prob,
+                        nb_layers=len(conv_defs),
+                        end_points=end_points)
                 # Unknown...
                 else:
                     raise ValueError('Unknown convolution type %s for layer %d'
@@ -273,6 +290,7 @@ def mobilenet_v2_base(inputs,
 def mobilenet_v2(inputs,
                  num_classes=1000,
                  dropout_keep_prob=0.999,
+                 drop_path_keep_prob=1.0,
                  is_training=True,
                  min_depth=8,
                  depth_multiplier=1.0,
@@ -331,6 +349,7 @@ def mobilenet_v2(inputs,
             net, end_points = mobilenet_v2_base(inputs, scope=scope,
                                                 min_depth=min_depth,
                                                 depth_multiplier=depth_multiplier,
+                                                drop_path_keep_prob=drop_path_keep_prob,
                                                 conv_defs=conv_defs)
             with tf.variable_scope('Logits'):
                 if global_pool:
@@ -405,11 +424,13 @@ def mobilenet_v2_arg_scope(is_training=True,
                         activation_fn=tf.nn.relu,
                         normalizer_fn=normalizer_fn,
                         normalizer_params=normalizer_params):
-        with slim.arg_scope([slim.batch_norm], **batch_norm_params):
-            with slim.arg_scope([slim.conv2d], weights_regularizer=weights_regularizer):
-                with slim.arg_scope([slim.separable_conv2d],
-                                    weights_regularizer=depthwise_regularizer):
-                    # Data format scope...
-                    data_sc = abstract_model.data_format_scope(data_format)
-                    with slim.arg_scope(data_sc) as sc:
-                        return sc
+        with slim.arg_scope([tfx.layers.drop_path_depth],
+                            is_training=is_training):
+            with slim.arg_scope([slim.batch_norm], **batch_norm_params):
+                with slim.arg_scope([slim.conv2d], weights_regularizer=weights_regularizer):
+                    with slim.arg_scope([slim.separable_conv2d],
+                                        weights_regularizer=depthwise_regularizer):
+                        # Data format scope...
+                        data_sc = abstract_model.data_format_scope(data_format)
+                        with slim.arg_scope(data_sc) as sc:
+                            return sc
