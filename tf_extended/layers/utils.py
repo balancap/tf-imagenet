@@ -288,3 +288,28 @@ def drop_path(inputs, keep_prob, is_training=True, scope=None):
             binary_tensor = tf.floor(random_tensor)
             net = tf.div(net, keep_prob) * binary_tensor
         return net
+
+@add_arg_scope
+def drop_path_depth(inputs,
+                    keep_prob,
+                    idx_layer,
+                    nb_layers,
+                    total_training_steps,
+                    is_training=True,
+                    scope=None):
+    """Apply drop path, with a depth depending on the layer idx.
+    """
+    with tf.name_scope(scope, 'drop_path_depth', [inputs]):
+        net = inputs
+        if keep_prob < 1.0:
+            layer_ratio = (idx_layer + 1.) / float(nb_layers)
+            drop_path_keep_prob = 1 - layer_ratio * (1. - keep_prob)
+            # Decrease the keep probability over time
+            current_step = tf.cast(tf.train.get_or_create_global_step(), tf.float32)
+            current_ratio = current_step / float(total_training_steps)
+            current_ratio = tf.minimum(1.0, current_ratio)
+            # with tf.device('/cpu:0'):
+            #     tf.summary.scalar('current_ratio', current_ratio)
+            drop_path_keep_prob = (1 - current_ratio * (1 - drop_path_keep_prob))
+            net = drop_path(net, drop_path_keep_prob, is_training)
+        return net
