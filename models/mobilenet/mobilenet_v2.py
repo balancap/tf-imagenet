@@ -33,7 +33,7 @@ from models import abstract_model
 
 slim = tf.contrib.slim
 
-TOTAL_TRAINING_STEPS = 250000
+TOTAL_TRAINING_STEPS = 2000000
 
 # =========================================================================== #
 # MobileNet model.
