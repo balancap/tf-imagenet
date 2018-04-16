@@ -49,6 +49,12 @@ def get_imagenet_models():
             depth_multiplier=1.4, regularize_depthwise=False, kernel_size=3),
         'mobilenet_v2_k5_d1': lambda: mobilenet_v2.MobileNetV2(
             depth_multiplier=1.0, regularize_depthwise=False, kernel_size=5),
+        'mobilenet_v2_k5_d1_drop08': lambda: mobilenet_v2.MobileNetV2(
+            depth_multiplier=1.0, regularize_depthwise=False, kernel_size=5, dropout_keep_prob=0.8),
+        'mobilenet_v2_k5_d1_drop07': lambda: mobilenet_v2.MobileNetV2(
+            depth_multiplier=1.0, regularize_depthwise=False, kernel_size=5, dropout_keep_prob=0.7),
+        'mobilenet_v2_k5_d1_drop05': lambda: mobilenet_v2.MobileNetV2(
+            depth_multiplier=1.0, regularize_depthwise=False, kernel_size=5, dropout_keep_prob=0.5),
         'mobilenet_v2_k5_d1_reg': lambda: mobilenet_v2.MobileNetV2(
             depth_multiplier=1.0, regularize_depthwise=True, kernel_size=5),
         'mobilenet_v2_k5_d1_dp': lambda: mobilenet_v2.MobileNetV2(
