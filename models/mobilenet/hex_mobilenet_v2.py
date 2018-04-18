@@ -47,11 +47,16 @@ slim = tf.contrib.slim
 class HexMobileNetV2(abstract_model.Model):
     """MobileNetV2 model.
     """
-    def __init__(self, ksize=5, regularize_depthwise=False, depth_multiplier=1.0):
+    def __init__(self,
+                 ksize=5,
+                 regularize_depthwise=False,
+                 depth_multiplier=1.0,
+                 dropout_keep_prob=0.8):
         self.scope = 'HexMobilenetV2'
         self.ksize = ksize
         self.regularize_depthwise = regularize_depthwise
         self.depth_multiplier = depth_multiplier
+        self.dropout_keep_prob = dropout_keep_prob
         super(HexMobileNetV2, self).__init__(self.scope, 224, 32, 0.005)
 
     def forward(self, inputs, num_classes, data_format, is_training):
@@ -67,7 +72,7 @@ class HexMobileNetV2(abstract_model.Model):
             logits, end_points = hex_mobilenet_v2(
                 inputs,
                 num_classes=num_classes,
-                dropout_keep_prob=0.8,
+                dropout_keep_prob=self.dropout_keep_prob,
                 is_training=is_training,
                 min_depth=8,
                 depth_multiplier=self.depth_multiplier,
