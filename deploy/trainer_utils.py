@@ -78,6 +78,9 @@ def restore_checkpoint_fn(ckpt_filename,
     # Remove global step variable.
     if remove_global_step:
         variables_to_restore.pop('global_step', None)
+    # Remove rmsprop variables.
+    variables_to_restore = {k: v
+            for k, v in variables_to_restore.items() if 'RMSProp' not in k}
 
     # Replace v{i}/cg/ by vo/cg. UGLY HACK!
     # for i in range(1, 8):
