@@ -1,16 +1,5 @@
-# Copyright 2017 The TensorFlow Authors. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# =============================================================================
+# Copyright 2018 Paul Balanca
 # =============================================================================
 """MobileNet v2.
 
@@ -30,12 +19,32 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from tensorflow.contrib.framework.python.ops import add_arg_scope
+from tensorflow.contrib.framework.python.ops import variables
+from tensorflow.contrib.layers.python.layers import initializers
+from tensorflow.contrib.layers.python.layers import utils
+
+from tensorflow.python.framework import dtypes
+from tensorflow.python.framework import ops
+from tensorflow.python.ops import array_ops
+from tensorflow.python.ops import init_ops
+from tensorflow.python.ops import math_ops
+from tensorflow.python.ops import nn
+from tensorflow.python.ops import standard_ops
+from tensorflow.python.ops import variable_scope
+from tensorflow.python.ops import control_flow_ops
+from tensorflow.python.training import moving_averages
+from tensorflow.python.layers import convolutional as convolutional_layers
+from tensorflow.python.ops import variables as tf_variables
+
+
 from collections import namedtuple
 import functools
 
 import tensorflow as tf
 import tf_extended as tfx
 from tensorflow.contrib import hex_layers
+from . import hex_tools
 
 from models import abstract_model
 
@@ -47,16 +56,11 @@ slim = tf.contrib.slim
 class HexMobileNetV2(abstract_model.Model):
     """MobileNetV2 model.
     """
-    def __init__(self,
-                 ksize=5,
-                 regularize_depthwise=False,
-                 depth_multiplier=1.0,
-                 dropout_keep_prob=0.8):
+    def __init__(self, ksize=5, regularize_depthwise=False, depth_multiplier=1.0):
         self.scope = 'HexMobilenetV2'
         self.ksize = ksize
         self.regularize_depthwise = regularize_depthwise
         self.depth_multiplier = depth_multiplier
-        self.dropout_keep_prob = dropout_keep_prob
         super(HexMobileNetV2, self).__init__(self.scope, 224, 32, 0.005)
 
     def forward(self, inputs, num_classes, data_format, is_training):
@@ -72,7 +76,7 @@ class HexMobileNetV2(abstract_model.Model):
             logits, end_points = hex_mobilenet_v2(
                 inputs,
                 num_classes=num_classes,
-                dropout_keep_prob=self.dropout_keep_prob,
+                dropout_keep_prob=0.9,
                 is_training=is_training,
                 min_depth=8,
                 depth_multiplier=self.depth_multiplier,
@@ -130,70 +134,6 @@ def hex_mobilenet_v2_def(ksize=5):
         Conv(kernel=[1, 1], stride=1, depth=1280, factor=1)
     ]
     return _CONV_DEFS
-
-
-def block_conv(idx, net, block_def, depth_fn, end_points):
-    """Construct a convolution block.
-    """
-    end_point = 'Conv2d_%d' % idx
-    net = slim.conv2d(net, depth_fn(block_def.depth), block_def.kernel,
-                      stride=block_def.stride, scope=end_point)
-    end_points[end_point] = net
-    return net
-
-def block_hex_from_cart(idx, net, block_def, end_points):
-    """Cartesian to Hex.
-    """
-    end_point_base = 'Conv2d_%d' % idx
-    end_point = end_point_base + '_hex_from_cart'
-    net = hex_layers.hex_from_cartesian(
-        net, downscale=block_def.downscale, extend=block_def.extend)
-    end_points[end_point] = net
-    return net
-
-def block_hex_bottleneck(idx,
-                         net,
-                         block_def,
-                         in_depth,
-                         depth_fn,
-                         layer_stride,
-                         layer_rate,
-                         nb_layers,
-                         end_points):
-    """Construct a bottleneck block.
-    """
-    end_point_base = 'Conv2d_%d' % idx
-    # Stride > 1 or different depth: no residual part.
-    # in_depth = tfx.layers.channel_dimension(net.get_shape())
-    res = net if layer_stride == 1 and in_depth == block_def.depth else None
-
-    # Increase depth with 1x1 conv.
-    end_point = end_point_base + '_up_pointwise'
-    net = slim.conv2d(net, depth_fn(in_depth * block_def.factor),
-                        [1, 1], stride=1, scope=end_point)
-    end_points[end_point] = net
-    # Hex depthwise.
-    end_point = end_point_base + '_hex_depthwise'
-    net = hex_layers.hex_depthwise_conv2d(
-        net, block_def.kernel,
-        depth_multiplier=1, stride=1, rate=1,
-        normalizer_fn=slim.batch_norm, scope=end_point)
-
-    if layer_stride > 1:
-        net = hex_layers.hex_downscale2d(
-            net, rate=2, scope=end_point_base + '_downscale2d')
-    end_points[end_point] = net
-    # Downscale 1x1 conv.
-    end_point = end_point_base + '_down_pointwise'
-    net = slim.conv2d(net, depth_fn(block_def.depth),
-                      [1, 1], activation_fn=None,
-                      stride=1, scope=end_point)
-
-    # Residual connection?
-    end_point = end_point_base + '_residual'
-    net = tf.add(res, net, name=end_point) if res is not None else net
-    end_points[end_point] = net
-    return net
 
 
 def hex_mobilenet_v2_base(inputs,
@@ -266,7 +206,9 @@ def hex_mobilenet_v2_base(inputs,
             rate = 1
             net = inputs
             in_depth = 3
+            rot_net = None
             for i, conv_def in enumerate(conv_defs):
+                end_point_base = 'Conv2d_%d' % i
                 if output_stride is not None and current_stride == output_stride:
                     # If we have reached the target output_stride, then we need to employ
                     # atrous convolution with stride=1 and multiply the atrous rate by the
@@ -281,17 +223,59 @@ def hex_mobilenet_v2_base(inputs,
 
                 # Normal conv2d.
                 if isinstance(conv_def, Conv):
-                    net = block_conv(i, net, conv_def, depth, end_points)
-                # Hexagonal from Cartesian convert.
+                    end_point = end_point_base
+                    net = slim.conv2d(net, depth(conv_def.depth), conv_def.kernel,
+                                      stride=conv_def.stride, scope=end_point)
+                    end_points[end_point] = net
+
+                # Hexagonal to Cartesian convert.
                 elif isinstance(conv_def, HexFromCart):
-                    net = block_hex_from_cart(i, net, conv_def, end_points)
-                # Bottleneck block.
+                    end_point = end_point_base + '_hex_from_cart'
+                    net = hex_layers.hex_from_cartesian(
+                        net, downscale=conv_def.downscale, extend=conv_def.extend)
+                    end_points[end_point] = net
+
+                # Hex. bottleneck block.
                 elif isinstance(conv_def, HexBottleneck):
-                    net = block_hex_bottleneck(
-                        i, net, conv_def, in_depth, depth,
-                        layer_stride, layer_rate,
-                        nb_layers=len(conv_defs),
-                        end_points=end_points)
+                    # Stride > 1 or different depth: no residual part.
+                    # in_depth = tfx.layers.channel_dimension(net.get_shape())
+                    res = net if layer_stride == 1 and in_depth == conv_def.depth else None
+
+                    # Increase depth with 1x1 conv.
+                    end_point = end_point_base + '_up_pointwise'
+                    net = slim.conv2d(net, depth(in_depth * conv_def.factor),
+                                      [1, 1], stride=1, scope=end_point)
+                    end_points[end_point] = net
+
+                    # Compute rotation tensor.
+                    rot_net = hex_rotation_tensor(net, rot_net, scope=end_point_base+'_rot')
+
+                    # Hex depthwise.
+                    end_point = end_point_base + '_hex_depthwise'
+                    net = hex_rot_depthwise_conv2d(
+                        net,
+                        rot_net,
+                        conv_def.kernel,
+                        depth_multiplier=1, stride=1, rate=1,
+                        normalizer_fn=slim.batch_norm, scope=end_point)
+
+                    if layer_stride > 1:
+                        net = hex_layers.hex_downscale2d(
+                            net, rate=2, scope=end_point_base + '_downscale2d')
+                        rot_net = hex_layers.hex_downscale2d(
+                            rot_net, rate=2, scope=end_point_base + '_downscale2d_rot')
+
+                    end_points[end_point] = net
+                    # Downscale 1x1 conv.
+                    end_point = end_point_base + '_down_pointwise'
+                    net = slim.conv2d(net, depth(conv_def.depth),
+                                      [1, 1], activation_fn=None,
+                                      stride=1, scope=end_point)
+                    # Residual connection?
+                    # print(net, res, end_point, in_depth, conv_def.depth)
+                    end_point = end_point_base + '_residual'
+                    net = tf.add(res, net, name=end_point) if res is not None else net
+                    end_points[end_point] = net
                 else:
                     raise ValueError('Unknown convolution type %s for layer %d'
                                      % (conv_def.ltype, i))
@@ -438,7 +422,9 @@ def hex_mobilenet_v2_arg_scope(is_training=True,
         depthwise_regularizer = None
     with slim.arg_scope([slim.conv2d,
                          slim.separable_conv2d,
-                         hex_layers.hex_depthwise_convolution2d],
+                         hex_layers.hex_depthwise_convolution2d,
+                         hex_rot_depthwise_convolution2d,
+                         hex_rotation_tensor],
                         weights_initializer=weights_initializer,
                         activation_fn=tf.nn.relu,
                         normalizer_fn=normalizer_fn,
@@ -446,10 +432,252 @@ def hex_mobilenet_v2_arg_scope(is_training=True,
         with slim.arg_scope([slim.batch_norm], **batch_norm_params):
             with slim.arg_scope([slim.conv2d], weights_regularizer=weights_regularizer):
                 with slim.arg_scope([slim.separable_conv2d,
-                                     hex_layers.hex_depthwise_convolution2d],
+                                     hex_layers.hex_depthwise_convolution2d,
+                                     hex_rot_depthwise_convolution2d,
+                                     hex_rotation_tensor],
                                     weights_regularizer=depthwise_regularizer):
                     # Data format scope...
                     data_sc = abstract_model.data_format_scope(data_format)
                     with slim.arg_scope(data_sc) as sc:
                         return sc
 
+# =========================================================================== #
+# Layers definitions.
+# =========================================================================== #
+@add_arg_scope
+def hex_rot_depthwise_convolution2d(
+        inputs,
+        alpha_tensor,
+        kernel_size,
+        depth_multiplier=1,
+        stride=1,
+        padding='SAME',
+        rate=1,
+        activation_fn=nn.relu,
+        normalizer_fn=None,
+        normalizer_params=None,
+        weights_initializer=initializers.xavier_initializer(),
+        weights_regularizer=None,
+        biases_initializer=init_ops.zeros_initializer(),
+        biases_regularizer=None,
+        reuse=None,
+        variables_collections=None,
+        outputs_collections=None,
+        trainable=True,
+        data_format='NHWC',
+        scope=None):
+    """Adds a depthwise 2D convolution with optional batch_norm layer.
+    Returns:
+        A `Tensor` representing the output of the operation.
+    """
+    with variable_scope.variable_scope(scope, 'HexDepthwiseConv2d', [inputs],
+                                       reuse=reuse) as sc:
+        inputs = ops.convert_to_tensor(inputs)
+        alpha_tensor = ops.convert_to_tensor(alpha_tensor)
+        # Rotation tensor.
+        alpha_tensor = hex_rotation_full(inputs, alpha_tensor, data_format=data_format)
+
+        # Actually apply depthwise conv instead of separable conv.
+        dtype = inputs.dtype.base_dtype
+        kernel_h, kernel_w = utils.two_element_tuple(kernel_size)
+        stride_h, stride_w = utils.two_element_tuple(stride)
+        if data_format == 'NHWC':
+            num_filters_in = utils.last_dimension(inputs.get_shape(), min_rank=4)
+            strides = [1, stride_h, stride_w, 1]
+        else:
+            # No NCHW for now...
+            raise NotImplementedError()
+            # num_filters_in = inputs.get_shape().as_list()[1]
+            # strides = [1, 1, stride_h, stride_w]
+
+        weights_collections = utils.get_variable_collections(
+            variables_collections, 'weights')
+
+        # Depthwise weights variable.
+        depthwise_shape = [kernel_h, kernel_w,
+                           num_filters_in, depth_multiplier]
+        depthwise_weights = variables.model_variable(
+            'hex_depthwise_weights',
+            shape=depthwise_shape,
+            dtype=dtype,
+            initializer=weights_initializer,
+            regularizer=weights_regularizer,
+            trainable=trainable,
+            collections=weights_collections)
+
+        outputs = nn.hex_rot_depthwise_conv2d_native(
+            inputs,
+            depthwise_weights,
+            alpha_tensor,
+            strides=strides,
+            padding=padding,
+            data_format=data_format)
+        num_outputs = depth_multiplier * num_filters_in
+
+        if normalizer_fn is not None:
+            normalizer_params = normalizer_params or {}
+            outputs = normalizer_fn(outputs, **normalizer_params)
+        else:
+            if biases_initializer is not None:
+                biases_collections = utils.get_variable_collections(
+                    variables_collections, 'biases')
+                biases = variables.model_variable('biases',
+                                                  shape=[num_outputs,],
+                                                  dtype=dtype,
+                                                  initializer=biases_initializer,
+                                                  regularizer=biases_regularizer,
+                                                  trainable=trainable,
+                                                  collections=biases_collections)
+                outputs = nn.bias_add(outputs, biases, data_format=data_format)
+        if activation_fn is not None:
+            outputs = activation_fn(outputs)
+        return utils.collect_named_outputs(outputs_collections,
+                                           sc.original_name_scope, outputs)
+hex_rot_depthwise_conv2d = hex_rot_depthwise_convolution2d
+
+@add_arg_scope
+def hex_rotation_full(
+        inputs,
+        alpha_tensor,
+        reuse=None,
+        data_format='NHWC',
+        scope=None):
+    """Convert a rotation vector to a full one.
+    """
+    with variable_scope.variable_scope(scope, 'HexRotationGate', [inputs],
+                                       reuse=reuse) as sc:
+        # alpha_tensor supposed to have shape of [N,H,W,1]
+        inputs = ops.convert_to_tensor(inputs)
+        alpha_tensor = ops.convert_to_tensor(alpha_tensor)
+        # Actually apply depthwise conv instead of separable conv.
+        dtype = inputs.dtype.base_dtype
+        if data_format == 'NHWC':
+            num_filters_in = utils.last_dimension(inputs.get_shape(), min_rank=4)
+        else:
+            # No NCHW for now...
+            raise NotImplementedError()
+
+        rot_shape = [1, 1, 1, num_filters_in]
+        w = tf.constant(1., shape=rot_shape, dtype=dtype)
+        r = alpha_tensor * w
+        return r
+
+@add_arg_scope
+def hex_rotation_tensor(
+        inputs,
+        rot_net,
+        weights_initializer=initializers.xavier_initializer(),
+        weights_regularizer=None,
+        biases_initializer=init_ops.zeros_initializer(),
+        biases_regularizer=None,
+        normalizer_fn=None,
+        normalizer_params=None,
+        activation_fn=None,
+        reuse=None,
+        variables_collections=None,
+        outputs_collections=None,
+        trainable=True,
+        data_format='NHWC',
+        scope=None):
+    """Convert a rotation vector to a full one.
+    """
+    with variable_scope.variable_scope(scope, 'HexRotationTensor', [inputs],
+                                       reuse=reuse) as sc:
+        # alpha_tensor supposed to have shape of [N,H,W,1]
+        inputs = ops.convert_to_tensor(inputs)
+        # Actually apply depthwise conv instead of separable conv.
+        dtype = inputs.dtype.base_dtype
+        if data_format == 'NHWC':
+            num_filters_in = utils.last_dimension(inputs.get_shape(), min_rank=4)
+        else:
+            # No NCHW for now...
+            raise NotImplementedError()
+
+        # No initial rotation tensor.
+        if rot_net is None:
+            shape = inputs.get_shape().as_list()
+            shape[3] = 1
+            rot_net = tf.zeros(shape=shape, dtype=dtype)
+
+        activation_fn=None
+        weights_initializer=tf.contrib.layers.variance_scaling_initializer(
+            mode='FAN_AVG')
+        # Batch norm custom parameters
+        batch_norm_params = {
+            'decay': normalizer_params['decay'],
+            'epsilon': normalizer_params['epsilon'],
+            'updates_collections': tf.GraphKeys.UPDATE_OPS,
+            'fused': True,
+            'scale': True,
+            'data_format': normalizer_params['data_format'],
+            'is_training': normalizer_params['is_training'],
+            # 'param_initializers': {'gamma': gamma_initializer},
+        }
+
+        # First 1x1 conv...
+        weights_regularizer = None
+        rnet = inputs
+        rnet = slim.conv2d(
+            rnet, 32, [1, 1],
+            stride=1,
+            weights_initializer=weights_initializer,
+            weights_regularizer=weights_regularizer,
+            biases_initializer=biases_initializer,
+            biases_regularizer=biases_regularizer,
+            activation_fn=tf.nn.relu,
+            normalizer_fn=normalizer_fn,
+            normalizer_params=batch_norm_params,
+            scope='rot_conv1')
+        # 5x5 hex. rot. conv.
+        rnet = hex_rot_depthwise_conv2d(
+            rnet, rot_net, [5, 5],
+            depth_multiplier=1, stride=1, rate=1,
+            activation_fn=tf.nn.relu,
+            normalizer_fn=slim.batch_norm, scope='rot_conv1_dw')
+
+        # 1x1 conv2d + tanh normalization.
+        gamma_initializer = tf.constant_initializer(1.)
+        batch_norm_params['param_initializers'] = {'gamma': gamma_initializer}
+        rnet = slim.conv2d(
+            rnet, 16, [1, 1],
+            stride=1,
+            weights_initializer=weights_initializer,
+            weights_regularizer=weights_regularizer,
+            biases_initializer=biases_initializer,
+            biases_regularizer=biases_regularizer,
+            activation_fn=tf.nn.relu,
+            normalizer_fn=normalizer_fn,
+            normalizer_params=batch_norm_params,
+            scope='rot_conv2')
+         # 5x5 hex. rot. conv.
+        rnet = hex_rot_depthwise_conv2d(
+            rnet, rot_net, [5, 5],
+            depth_multiplier=1, stride=1, rate=1,
+            activation_fn=tf.nn.relu,
+            normalizer_fn=slim.batch_norm, scope='rot_conv2_dw')
+
+        # 1x1 conv2d + tanh normalization.
+        gamma_initializer = tf.constant_initializer(0.01)
+        batch_norm_params['param_initializers'] = {'gamma': gamma_initializer}
+        rnet = slim.conv2d(
+            rnet, 1, [1, 1],
+            stride=1,
+            weights_initializer=weights_initializer,
+            weights_regularizer=weights_regularizer,
+            biases_initializer=biases_initializer,
+            biases_regularizer=biases_regularizer,
+            activation_fn=tf.nn.relu,
+            normalizer_fn=normalizer_fn,
+            normalizer_params=batch_norm_params,
+            scope='rot_conv3')
+         # 5x5 hex. rot. conv.
+        rnet = hex_rot_depthwise_conv2d(
+            rnet, rot_net, [5, 5],
+            depth_multiplier=1, stride=1, rate=1,
+            activation_fn=None,
+            normalizer_fn=slim.batch_norm,
+            scope='rot_conv3_dw')
+
+        # Non linearity + residual
+        rnet = tf.tanh(rnet) + rot_net
+        return rnet

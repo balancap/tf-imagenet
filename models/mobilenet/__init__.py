@@ -27,7 +27,7 @@ try:
     from . import hex_mobilenet_v1, hex_mobilenet_v2, hex_rot_mobilenet_v2
     from . import (
         hex_rot_mobilenet_v2a, hex_rot_mobilenet_v2b, hex_rot_mobilenet_v2c,
-        hex_rot_mobilenet_v2d, hex_rot_mobilenet_v2e)
+        hex_rot_mobilenet_v2d, hex_rot_mobilenet_v2e, hex_rot_mobilenet_v2_res)
 except ImportError:
     ADD_HEX_MOBILENETS = False
 
@@ -101,6 +101,8 @@ def get_imagenet_models():
             'hex_rot_mobilenet_v2_5x5_d1d': lambda: hex_rot_mobilenet_v2d.HexMobileNetV2(
                 ksize=5, regularize_depthwise=True, depth_multiplier=1.0),
             'hex_rot_mobilenet_v2_5x5_d1e': lambda: hex_rot_mobilenet_v2e.HexMobileNetV2(
+                ksize=5, regularize_depthwise=True, depth_multiplier=1.0),
+            'hex_rot_mobilenet_v2_5x5_d1_res': lambda: hex_rot_mobilenet_v2_res.HexMobileNetV2(
                 ksize=5, regularize_depthwise=True, depth_multiplier=1.0),
         })
     return d
