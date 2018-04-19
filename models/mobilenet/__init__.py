@@ -76,6 +76,14 @@ def get_imagenet_models():
                 ksize=5, regularize_depthwise=False, depth_multiplier=1.0, dropout_keep_prob=0.8),
             'hex_mobilenet_v2_5x5_d1_reg': lambda: hex_mobilenet_v2.HexMobileNetV2(
                 ksize=5, regularize_depthwise=True, depth_multiplier=1.0, dropout_keep_prob=0.8),
+            'hex_mobilenet_v2_5x5_d1_drop09': lambda: hex_mobilenet_v2.HexMobileNetV2(
+                ksize=5, regularize_depthwise=False, depth_multiplier=1.0, dropout_keep_prob=0.9),
+            'hex_mobilenet_v2_5x5_d1_reg_drop09': lambda: hex_mobilenet_v2.HexMobileNetV2(
+                ksize=5, regularize_depthwise=True, depth_multiplier=1.0, dropout_keep_prob=0.9),
+            'hex_mobilenet_v2_5x5_d1_drop085': lambda: hex_mobilenet_v2.HexMobileNetV2(
+                ksize=5, regularize_depthwise=False, depth_multiplier=1.0, dropout_keep_prob=0.85),
+            'hex_mobilenet_v2_5x5_d1_reg_drop085': lambda: hex_mobilenet_v2.HexMobileNetV2(
+                ksize=5, regularize_depthwise=True, depth_multiplier=1.0, dropout_keep_prob=0.85),
             'hex_mobilenet_v2_5x5_d14': lambda: hex_mobilenet_v2.HexMobileNetV2(
                 ksize=5, regularize_depthwise=False, depth_multiplier=1.4, dropout_keep_prob=0.8),
             'hex_mobilenet_v2_5x5_d14_reg': lambda: hex_mobilenet_v2.HexMobileNetV2(
