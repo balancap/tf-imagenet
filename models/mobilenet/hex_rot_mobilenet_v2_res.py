@@ -636,8 +636,8 @@ def hex_rotation_tensor(
             normalizer_fn=slim.batch_norm, scope='rot_conv1_dw')
 
         # 1x1 conv2d + tanh normalization.
-        gamma_initializer = tf.constant_initializer(1.)
-        batch_norm_params['param_initializers'] = {'gamma': gamma_initializer}
+        # gamma_initializer = tf.constant_initializer(1.)
+        # batch_norm_params['param_initializers'] = {'gamma': gamma_initializer}
         rnet = slim.conv2d(
             rnet, 16, [1, 1],
             stride=1,
@@ -666,17 +666,17 @@ def hex_rotation_tensor(
             weights_regularizer=weights_regularizer,
             biases_initializer=biases_initializer,
             biases_regularizer=biases_regularizer,
-            activation_fn=tf.nn.relu,
+            activation_fn=None,
             normalizer_fn=normalizer_fn,
             normalizer_params=batch_norm_params,
             scope='rot_conv3')
          # 5x5 hex. rot. conv.
-        rnet = hex_rot_depthwise_conv2d(
-            rnet, rot_net, [5, 5],
-            depth_multiplier=1, stride=1, rate=1,
-            activation_fn=None,
-            normalizer_fn=slim.batch_norm,
-            scope='rot_conv3_dw')
+        # rnet = hex_rot_depthwise_conv2d(
+        #     rnet, rot_net, [5, 5],
+        #     depth_multiplier=1, stride=1, rate=1,
+        #     activation_fn=None,
+        #     normalizer_fn=slim.batch_norm,
+        #     scope='rot_conv3_dw')
 
         # Non linearity + residual
         rnet = tf.tanh(rnet) + rot_net
