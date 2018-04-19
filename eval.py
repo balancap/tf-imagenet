@@ -54,8 +54,8 @@ def replace_with_train_params(params):
     if p.data_subset == 'train':
         p = p._replace(data_subset='validation')
 
-    p = p._replace(batch_size=4)
-    p = p._replace(num_gpus=train_params.num_gpus)
+    # p = p._replace(batch_size=4)
+    # p = p._replace(num_gpus=train_params.num_gpus)
     p = p._replace(gpu_memory_frac_for_testing=0.1)
     p = p._replace(num_intra_threads=0)
     p = p._replace(num_inter_threads=0)
