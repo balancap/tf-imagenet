@@ -670,13 +670,8 @@ def hex_rotation_tensor(
             normalizer_fn=normalizer_fn,
             normalizer_params=batch_norm_params,
             scope='rot_conv3')
-         # 5x5 hex. rot. conv.
-        # rnet = hex_rot_depthwise_conv2d(
-        #     rnet, rot_net, [5, 5],
-        #     depth_multiplier=1, stride=1, rate=1,
-        #     activation_fn=None,
-        #     normalizer_fn=slim.batch_norm,
-        #     scope='rot_conv3_dw')
+        # Avg pooling
+        # rnet = hex_tools.hex_average_pooling2d(rnet, [5, 5])
 
         # Non linearity + residual
         rnet = tf.tanh(rnet) + rot_net
