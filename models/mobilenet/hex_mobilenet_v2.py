@@ -132,6 +132,70 @@ def hex_mobilenet_v2_def(ksize=5):
     return _CONV_DEFS
 
 
+def block_conv(idx, net, block_def, depth_fn, end_points):
+    """Construct a convolution block.
+    """
+    end_point = 'Conv2d_%d' % idx
+    net = slim.conv2d(net, depth_fn(block_def.depth), block_def.kernel,
+                      stride=block_def.stride, scope=end_point)
+    end_points[end_point] = net
+    return net
+
+def block_hex_from_cart(idx, net, block_def, end_points):
+    """Cartesian to Hex.
+    """
+    end_point_base = 'Conv2d_%d' % idx
+    end_point = end_point_base + '_hex_from_cart'
+    net = hex_layers.hex_from_cartesian(
+        net, downscale=block_def.downscale, extend=block_def.extend)
+    end_points[end_point] = net
+    return net
+
+def block_hex_bottleneck(idx,
+                         net,
+                         block_def,
+                         in_depth,
+                         depth_fn,
+                         layer_stride,
+                         layer_rate,
+                         nb_layers,
+                         end_points):
+    """Construct a bottleneck block.
+    """
+    end_point_base = 'Conv2d_%d' % idx
+    # Stride > 1 or different depth: no residual part.
+    # in_depth = tfx.layers.channel_dimension(net.get_shape())
+    res = net if layer_stride == 1 and in_depth == block_def.depth else None
+
+    # Increase depth with 1x1 conv.
+    end_point = end_point_base + '_up_pointwise'
+    net = slim.conv2d(net, depth_fn(in_depth * block_def.factor),
+                        [1, 1], stride=1, scope=end_point)
+    end_points[end_point] = net
+    # Hex depthwise.
+    end_point = end_point_base + '_hex_depthwise'
+    net = hex_layers.hex_depthwise_conv2d(
+        net, block_def.kernel,
+        depth_multiplier=1, stride=1, rate=1,
+        normalizer_fn=slim.batch_norm, scope=end_point)
+
+    if layer_stride > 1:
+        net = hex_layers.hex_downscale2d(
+            net, rate=2, scope=end_point_base + '_downscale2d')
+    end_points[end_point] = net
+    # Downscale 1x1 conv.
+    end_point = end_point_base + '_down_pointwise'
+    net = slim.conv2d(net, depth_fn(block_def.depth),
+                      [1, 1], activation_fn=None,
+                      stride=1, scope=end_point)
+
+    # Residual connection?
+    end_point = end_point_base + '_residual'
+    net = tf.add(res, net, name=end_point) if res is not None else net
+    end_points[end_point] = net
+    return net
+
+
 def hex_mobilenet_v2_base(inputs,
                           final_endpoint='Conv2d_19',
                           min_depth=8,
@@ -218,48 +282,17 @@ def hex_mobilenet_v2_base(inputs,
 
                 # Normal conv2d.
                 if isinstance(conv_def, Conv):
-                    end_point = end_point_base
-                    net = slim.conv2d(net, depth(conv_def.depth), conv_def.kernel,
-                                      stride=conv_def.stride, scope=end_point)
-                    end_points[end_point] = net
-                # Hexagonal to Cartesian convert.
+                    net = block_conv(i, net, conv_def, depth, end_points)
+                # Hexagonal from Cartesian convert.
                 elif isinstance(conv_def, HexFromCart):
-                    end_point = end_point_base + '_hex_from_cart'
-                    net = hex_layers.hex_from_cartesian(
-                        net, downscale=conv_def.downscale, extend=conv_def.extend)
-                    end_points[end_point] = net
-                # Hex. bottleneck block.
+                    net = block_hex_from_cart(i, net, conv_def, end_points)
+                # Bottleneck block.
                 elif isinstance(conv_def, HexBottleneck):
-                    # Stride > 1 or different depth: no residual part.
-                    # in_depth = tfx.layers.channel_dimension(net.get_shape())
-                    res = net if layer_stride == 1 and in_depth == conv_def.depth else None
-
-                    # Increase depth with 1x1 conv.
-                    end_point = end_point_base + '_up_pointwise'
-                    net = slim.conv2d(net, depth(in_depth * conv_def.factor),
-                                      [1, 1], stride=1, scope=end_point)
-                    end_points[end_point] = net
-                    # Hex depthwise.
-                    end_point = end_point_base + '_hex_depthwise'
-                    net = hex_layers.hex_depthwise_conv2d(
-                        net, conv_def.kernel,
-                        depth_multiplier=1, stride=1, rate=1,
-                        normalizer_fn=slim.batch_norm, scope=end_point)
-
-                    if layer_stride > 1:
-                        net = hex_layers.hex_downscale2d(
-                            net, rate=2, scope=end_point_base + '_downscale2d')
-                    end_points[end_point] = net
-                    # Downscale 1x1 conv.
-                    end_point = end_point_base + '_down_pointwise'
-                    net = slim.conv2d(net, depth(conv_def.depth),
-                                      [1, 1], activation_fn=None,
-                                      stride=1, scope=end_point)
-                    # Residual connection?
-                    # print(net, res, end_point, in_depth, conv_def.depth)
-                    end_point = end_point_base + '_residual'
-                    net = tf.add(res, net, name=end_point) if res is not None else net
-                    end_points[end_point] = net
+                    net = block_hex_bottleneck(
+                        i, net, conv_def, in_depth, depth,
+                        layer_stride, layer_rate,
+                        nb_layers=len(conv_defs),
+                        end_points=end_points)
                 else:
                     raise ValueError('Unknown convolution type %s for layer %d'
                                      % (conv_def.ltype, i))
