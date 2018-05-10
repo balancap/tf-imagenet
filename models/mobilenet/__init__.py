@@ -75,9 +75,9 @@ def get_imagenet_models():
             'hex_mobilenet_v2_5x5_d05': lambda: hex_mobilenet_v2.HexMobileNetV2(
                 ksize=5, regularize_depthwise=False, depth_multiplier=0.5, dropout_keep_prob=0.95),
             'hex_mobilenet_v2_5x5_d05_reg': lambda: hex_mobilenet_v2.HexMobileNetV2(
-                ksize=5, regularize_depthwise=True, depth_multiplier=0.5, dropout_keep_prob=0.95),
+                ksize=5, regularize_depthwise=True, depth_multiplier=0.5, dropout_keep_prob=0.9),
             'hex_mobilenet_v2_5x5_d075': lambda: hex_mobilenet_v2.HexMobileNetV2(
-                ksize=5, regularize_depthwise=False, depth_multiplier=0.75, dropout_keep_prob=0.9),
+                ksize=5, regularize_depthwise=False, depth_multiplier=0.75, dropout_keep_prob=0.85),
             'hex_mobilenet_v2_5x5_d075_reg': lambda: hex_mobilenet_v2.HexMobileNetV2(
                 ksize=5, regularize_depthwise=True, depth_multiplier=0.75, dropout_keep_prob=0.9),
             'hex_mobilenet_v2_5x5_d1': lambda: hex_mobilenet_v2.HexMobileNetV2(
